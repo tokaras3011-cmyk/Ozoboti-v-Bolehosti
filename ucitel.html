@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Učitel – kolo Ozobotů</title>
+<style>
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(#1a4a8a,#0a1a3a);color:#fff;min-height:100vh}
+  .wrap{max-width:1000px;margin:0 auto;padding:18px}
+  h1{margin:0 0 6px;font-size:30px}
+  .card{background:#ffffff14;border:1px solid #ffffff33;border-radius:16px;padding:16px 20px;margin:12px 0}
+  button,select,input{font:inherit;font-weight:700;border-radius:12px;border:0;padding:10px 18px;font-size:18px}
+  button{background:#36c86a;color:#06301a;cursor:pointer}
+  button.red{background:#ff6a6a;color:#3a0606}
+  button.gray{background:#c5cfdc;color:#223}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .big{font-size:64px;font-weight:900;text-align:center;letter-spacing:2px}
+  table{width:100%;border-collapse:collapse;font-size:22px}
+  td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #ffffff22}
+  td.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr.first td{color:#ffe94a;font-weight:900;font-size:28px}
+  .muted{opacity:.75;font-size:15px}
+  #diploma{display:none}
+  .dip{width:100%;height:95vh;box-sizing:border-box;border:14px double #0a6bd8;padding:30px;text-align:center;color:#123;background:#fff;page-break-after:always;display:flex;flex-direction:column;justify-content:center}
+  .dip h1{font-size:64px;color:#0a6bd8;margin:0}
+  .dip .nm{font-size:72px;font-weight:900;margin:20px 0}
+  .dip p{font-size:26px;margin:8px 0}
+  @media print{body>*:not(#diploma){display:none!important} #diploma{display:block!important} body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏁 Kolo Ozobotů – učitel</h1>
+  <div class="muted" id="join"></div>
+  <div class="card" id="pincard">
+    PIN: <input id="pin" type="password" size="8" value="">
+    <span class="muted">(výchozí je 1234, nastavuje se při spuštění serveru)</span>
+  </div>
+  <div class="card">
+    <div class="big" id="clock">—</div>
+    <div style="text-align:center;margin:10px 0" class="muted" id="phase"></div>
+    <div style="text-align:center">
+      Délka kola:
+      <select id="dur"><option value="120">2 min</option><option value="180">3 min</option><option value="300" selected>5 min</option><option value="480">8 min</option><option value="600">10 min</option><option value="900">15 min</option></select>
+      <button id="start">▶ Spustit kolo (start za 10 s)</button>
+      <button id="stop" class="red">■ Ukončit hned</button>
+      <button id="reset" class="gray">Nová tabule</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Průběžné pořadí</h2>
+    <table id="tbl"></table>
+    <div style="margin-top:12px"><button id="dip" class="gray">🖨 Vytisknout diplomy (všichni)</button> <button id="dip3" class="gray">🖨 Jen první tři</button></div>
+  </div>
+  <div class="muted">Děti hrají ve hře jako obvykle. Jakmile spustíte kolo, všem se automaticky spustí odpočet a stejná sada Ozobotů i událostí (spravedlivé soutěžení). Body se počítají z chycených Ozobotů.</div>
+</div>
+<div id="diploma"></div>
+<script>
+const $=id=>document.getElementById(id);
+let st=null,offset=0,pin=sessionStorage.getItem('pin')||'1234';
+$('pin').value=pin;$('pin').oninput=()=>{pin=$('pin').value;sessionStorage.setItem('pin',pin)};
+async function post(action,extra={}){
+  const r=await fetch('/api/teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({pin,action},extra))});
+  if(r.status===403){alert('Špatný PIN');return}
+  poll();
+}
+$('start').onclick=()=>post('start',{duration:+$('dur').value,delay:10});
+$('stop').onclick=()=>{if(confirm('Opravdu ukončit kolo hned?'))post('stop')};
+$('reset').onclick=()=>{if(confirm('Smazat tabuli a všechny hráče?'))post('reset')};
+const mmss=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+async function poll(){
+  try{
+    const r=await fetch('/api/state');const d=await r.json();st=d;offset=d.round.now-Date.now();
+    $('join').textContent='Děti otevřou: http://'+d.ip+':'+d.port+'/';
+    render();
+  }catch(e){$('phase').textContent='Server neodpovídá…'}
+}
+function render(){
+  if(!st)return;
+  const R=st.round,now=Date.now()+offset;let txt='',ph='';
+  if(R.phase==='idle'){txt='—';ph='Čeká se na spuštění kola'}
+  else if(R.phase==='countdown'){txt=mmss((R.start-now)/1000);ph='Odpočet… kolo č. '+R.id}
+  else if(R.phase==='running'){txt=mmss((R.start+R.duration*1000-now)/1000);ph='Kolo č. '+R.id+' běží'}
+  else{txt='HOTOVO';ph='Kolo č. '+R.id+' skončilo'}
+  $('clock').textContent=txt;$('phase').textContent=ph;
+  $('tbl').innerHTML='<tr><th>#</th><th>Jméno</th><th class="n">Chyceno</th><th class="n">Body</th></tr>'+st.board.map((p,i)=>'<tr class="'+(i===0?'first':'')+'"><td>'+(i+1)+'.</td><td>'+esc(p.name)+'</td><td class="n">'+p.caught+'</td><td class="n">'+p.score+'</td></tr>').join('');
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function diplomas(list){
+  if(!st)return;
+  const date=new Date().toLocaleDateString('cs-CZ');
+  $('diploma').innerHTML=list.map(([p,i])=>'<div class="dip"><h1>DIPLOM</h1><p>Ozoboti z Bolehoště – kolo č. '+st.round.id+'</p><div class="nm">'+esc(p.name)+'</div><p>obsadil(a) <b>'+(i+1)+'. místo</b></p><p>chytil(a) '+p.caught+' Ozobotů a získal(a) '+p.score+' bodů</p><p style="margin-top:40px">'+date+'</p></div>').join('');
+  $('diploma').style.display='block';setTimeout(()=>{window.print();$('diploma').style.display='none'},100);
+}
+$('dip').onclick=()=>diplomas(st.board.map((p,i)=>[p,i]));
+$('dip3').onclick=()=>diplomas(st.board.slice(0,3).map((p,i)=>[p,i]));
+poll();setInterval(poll,1000);setInterval(render,250);
+</script>
+</body>
+</html>
