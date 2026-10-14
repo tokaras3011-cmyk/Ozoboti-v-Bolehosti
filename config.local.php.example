@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Zkopírujte na config.local.php a nastavte PIN učitele.
+ *   cp config.local.php.example config.local.php
+ *
+ * Soubor config.local.php se na git/FTP jako tajný necommituje.
+ */
+return [
+    'teacher_pin' => '1234',
+];

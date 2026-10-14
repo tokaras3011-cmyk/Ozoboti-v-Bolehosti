@@ -4,3 +4,7 @@ __pycache__/
 .vscode/
 Thumbs.db
 vysledky*.json
+
+# PIN učitele a průběh kola — jen na počítači, ne na GitHub
+config.local.php
+data/state.json

@@ -90,6 +90,7 @@ function extrasInit(){
   /* ---------- Pomocníci ---------- */
   const $=id=>document.getElementById(id);
   const fileMode=location.protocol==='file:';
+  const API_BASE=new URL('.', location.href).href;
   const css=document.createElement('style');
   css.textContent=`
   #xbar{left:50%;top:66px;transform:translateX(-50%);font-size:22px;text-align:center;background:#7a2aa0cc;padding:5px 18px;border-radius:12px;display:none;white-space:nowrap}
@@ -292,7 +293,7 @@ function extrasInit(){
   async function poll(){
     if(fileMode)return;
     try{
-      const r=await fetch('/api/state',{cache:'no-store'});const d=await r.json();
+      const r=await fetch(new URL('api/state',API_BASE),{cache:'no-store'});const d=await r.json();
       Net.ok=true;Net.phase=d.round.phase;Net.id=d.round.id;Net.start=d.round.start;Net.dur=d.round.duration;Net.seed=d.round.seed;Net.stopped=d.round.stopped_at;
       Net.off=d.round.now-Date.now();Net.board=d.board;Net.ip=d.ip;Net.port=d.port;
     }catch(e){Net.ok=false}
@@ -336,7 +337,7 @@ function extrasInit(){
     ensureMissions();refreshHud();elRound.style.display='none';elBoard.style.display='none';elCount.style.display='none';
   }
   async function sendScore(final){
-    try{await fetch('/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:S.name,char:S.char,color:S.color,round:Round.lastId,score:Math.floor(Round.score),caught:Round.caught})})}catch(e){}
+    try{await fetch(new URL('api/score',API_BASE),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:S.name,char:S.char,color:S.color,round:Round.lastId,score:Math.floor(Round.score),caught:Round.caught})})}catch(e){}
   }
   async function finishRound(){
     if(Round.finished)return;Round.finished=true;

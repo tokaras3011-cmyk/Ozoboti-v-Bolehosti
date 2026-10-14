@@ -20,6 +20,11 @@
   td.n{text-align:right;font-variant-numeric:tabular-nums}
   tr.first td{color:#ffe94a;font-weight:900;font-size:28px}
   .muted{opacity:.75;font-size:15px}
+  .err{color:#ffb4b4;font-weight:800;margin-top:10px;display:none}
+  .gate{max-width:420px;margin:12vh auto 0}
+  .gate form{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+  .gate input{flex:1 1 8rem;min-width:0}
+  #panel[hidden],#gate[hidden]{display:none!important}
   #diploma{display:none}
   .dip{width:100%;height:95vh;box-sizing:border-box;border:14px double #0a6bd8;padding:30px;text-align:center;color:#123;background:#fff;page-break-after:always;display:flex;flex-direction:column;justify-content:center}
   .dip h1{font-size:64px;color:#0a6bd8;margin:0}
@@ -30,38 +35,110 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🏁 Kolo Ozobotů – učitel</h1>
-  <div class="muted" id="join"></div>
-  <div class="card" id="pincard">
-    PIN: <input id="pin" type="password" size="8" value="">
-    <span class="muted">(výchozí je 1234, nastavuje se při spuštění serveru)</span>
+  <div id="gate" class="gate card">
+    <h1>🏁 Kolo Ozobotů – učitel</h1>
+    <p class="muted">Zadejte PIN učitele. Bez něj se nastavení kola nezobrazí.</p>
+    <form id="gateform" class="gate form" autocomplete="off">
+      <input id="pin" type="password" inputmode="numeric" placeholder="PIN" required>
+      <button type="submit" id="gatebtn">Vstoupit</button>
+    </form>
+    <div class="err" id="gateerr">Špatný PIN</div>
   </div>
-  <div class="card">
-    <div class="big" id="clock">—</div>
-    <div style="text-align:center;margin:10px 0" class="muted" id="phase"></div>
-    <div style="text-align:center">
-      Délka kola:
-      <select id="dur"><option value="120">2 min</option><option value="180">3 min</option><option value="300" selected>5 min</option><option value="480">8 min</option><option value="600">10 min</option><option value="900">15 min</option></select>
-      <button id="start">▶ Spustit kolo (start za 10 s)</button>
-      <button id="stop" class="red">■ Ukončit hned</button>
-      <button id="reset" class="gray">Nová tabule</button>
+
+  <div id="panel" hidden>
+    <h1>🏁 Kolo Ozobotů – učitel</h1>
+    <div class="muted" id="join"></div>
+    <div class="card">
+      <div class="big" id="clock">—</div>
+      <div style="text-align:center;margin:10px 0" class="muted" id="phase"></div>
+      <div style="text-align:center">
+        Délka kola:
+        <select id="dur"><option value="120">2 min</option><option value="180">3 min</option><option value="300" selected>5 min</option><option value="480">8 min</option><option value="600">10 min</option><option value="900">15 min</option></select>
+        <button id="start">▶ Spustit kolo (start za 10 s)</button>
+        <button id="stop" class="red">■ Ukončit hned</button>
+        <button id="reset" class="gray">Nová tabule</button>
+        <button id="logout" class="gray">Odhlásit</button>
+      </div>
     </div>
+    <div class="card">
+      <h2 style="margin-top:0">Průběžné pořadí</h2>
+      <table id="tbl"></table>
+      <div style="margin-top:12px"><button id="dip" class="gray">🖨 Vytisknout diplomy (všichni)</button> <button id="dip3" class="gray">🖨 Jen první tři</button></div>
+    </div>
+    <div class="muted">Děti hrají ve hře jako obvykle. Jakmile spustíte kolo, všem se automaticky spustí odpočet a stejná sada Ozobotů i událostí (spravedlivé soutěžení). Body se počítají z chycených Ozobotů.</div>
   </div>
-  <div class="card">
-    <h2 style="margin-top:0">Průběžné pořadí</h2>
-    <table id="tbl"></table>
-    <div style="margin-top:12px"><button id="dip" class="gray">🖨 Vytisknout diplomy (všichni)</button> <button id="dip3" class="gray">🖨 Jen první tři</button></div>
-  </div>
-  <div class="muted">Děti hrají ve hře jako obvykle. Jakmile spustíte kolo, všem se automaticky spustí odpočet a stejná sada Ozobotů i událostí (spravedlivé soutěžení). Body se počítají z chycených Ozobotů.</div>
 </div>
 <div id="diploma"></div>
 <script>
 const $=id=>document.getElementById(id);
-let st=null,offset=0,pin=sessionStorage.getItem('pin')||'1234';
-$('pin').value=pin;$('pin').oninput=()=>{pin=$('pin').value;sessionStorage.setItem('pin',pin)};
+const API_BASE=new URL('.', location.href).href;
+const PIN_KEY='ozo_teacher_pin';
+let st=null,offset=0,pin='',pollTimer=null,renderTimer=null;
+
+async function teacher(action,extra={}){
+  const r=await fetch(new URL('api/teacher',API_BASE),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(Object.assign({pin,action},extra))
+  });
+  return r;
+}
+
+function showGate(msg){
+  $('panel').hidden=true;
+  $('gate').hidden=false;
+  $('gateerr').style.display=msg?'block':'none';
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null}
+  if(renderTimer){clearInterval(renderTimer);renderTimer=null}
+}
+
+function showPanel(){
+  $('gate').hidden=true;
+  $('panel').hidden=false;
+  $('gateerr').style.display='none';
+  poll();
+  if(!pollTimer)pollTimer=setInterval(poll,1000);
+  if(!renderTimer)renderTimer=setInterval(render,250);
+}
+
+async function unlock(candidate){
+  pin=String(candidate||'').trim();
+  if(!pin)return false;
+  const r=await teacher('auth');
+  if(r.status===403){
+    sessionStorage.removeItem(PIN_KEY);
+    pin='';
+    showGate(true);
+    return false;
+  }
+  if(!r.ok){
+    $('gateerr').textContent='Server neodpovídá…';
+    showGate(true);
+    return false;
+  }
+  sessionStorage.setItem(PIN_KEY,pin);
+  showPanel();
+  return true;
+}
+
+$('gateform').onsubmit=async e=>{
+  e.preventDefault();
+  $('gatebtn').disabled=true;
+  $('gateerr').style.display='none';
+  $('gateerr').textContent='Špatný PIN';
+  try{await unlock($('pin').value)}finally{$('gatebtn').disabled=false}
+};
+
+$('logout').onclick=()=>{
+  sessionStorage.removeItem(PIN_KEY);
+  pin='';
+  $('pin').value='';
+  showGate(false);
+};
+
 async function post(action,extra={}){
-  const r=await fetch('/api/teacher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({pin,action},extra))});
-  if(r.status===403){alert('Špatný PIN');return}
+  const r=await teacher(action,extra);
+  if(r.status===403){alert('Špatný PIN');showGate(true);return}
   poll();
 }
 $('start').onclick=()=>post('start',{duration:+$('dur').value,delay:10});
@@ -70,13 +147,13 @@ $('reset').onclick=()=>{if(confirm('Smazat tabuli a všechny hráče?'))post('re
 const mmss=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 async function poll(){
   try{
-    const r=await fetch('/api/state');const d=await r.json();st=d;offset=d.round.now-Date.now();
-    $('join').textContent='Děti otevřou: http://'+d.ip+':'+d.port+'/';
+    const r=await fetch(new URL('api/state',API_BASE));const d=await r.json();st=d;offset=d.round.now-Date.now();
+    $('join').textContent='Děti hrají na adrese této stránky (stejný web).';
     render();
   }catch(e){$('phase').textContent='Server neodpovídá…'}
 }
 function render(){
-  if(!st)return;
+  if(!st||$('panel').hidden)return;
   const R=st.round,now=Date.now()+offset;let txt='',ph='';
   if(R.phase==='idle'){txt='—';ph='Čeká se na spuštění kola'}
   else if(R.phase==='countdown'){txt=mmss((R.start-now)/1000);ph='Odpočet… kolo č. '+R.id}
@@ -94,7 +171,16 @@ function diplomas(list){
 }
 $('dip').onclick=()=>diplomas(st.board.map((p,i)=>[p,i]));
 $('dip3').onclick=()=>diplomas(st.board.slice(0,3).map((p,i)=>[p,i]));
-poll();setInterval(poll,1000);setInterval(render,250);
+
+(async()=>{
+  const saved=sessionStorage.getItem(PIN_KEY)||'';
+  if(saved){
+    $('pin').value=saved;
+    await unlock(saved);
+  }else{
+    showGate(false);
+  }
+})();
 </script>
 </body>
 </html>
