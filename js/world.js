@@ -39,11 +39,14 @@ function box(w,h,d,c,x=0,y=0,z=0,parent=game.scene){
   m.position.set(x,y+h/2+(parent===game.scene?gy(x,z):0),z);parent.add(m);return m;
 }
 function label(text,color='#fff',scale=1){
-  const c=document.createElement('canvas');c.width=512;c.height=128;
-  const g=c.getContext('2d');g.font='bold 60px Arial';g.textAlign='center';g.textBaseline='middle';
-  g.lineWidth=14;g.strokeStyle='#000';g.lineJoin='round';g.strokeText(text,256,64);g.fillStyle=color;g.fillText(text,256,64);
+  const c=document.createElement('canvas');
+  const g=c.getContext('2d');g.font='bold 60px Arial';
+  const tw=Math.ceil(g.measureText(text).width);
+  c.width=Math.max(512,tw+40);c.height=128;
+  g.font='bold 60px Arial';g.textAlign='center';g.textBaseline='middle';
+  g.lineWidth=14;g.strokeStyle='#000';g.lineJoin='round';g.strokeText(text,c.width/2,64);g.fillStyle=color;g.fillText(text,c.width/2,64);
   const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false,fog:false}));
-  s.scale.set(9*scale,2.25*scale,1);s.renderOrder=10;return s;
+  s.scale.set(9*scale*(c.width/512),2.25*scale,1);s.renderOrder=10;return s;
 }
 const placeLabel=(l,x,y,z)=>{l.position.set(x,y+gy(x,z),z);game.scene.add(l);return l};
 function glowTex(){
@@ -111,12 +114,12 @@ let sunSprite,moonSprite,stars,cloudMat;const clouds=[];
   const col=new THREE.Color(),m4=new THREE.Matrix4(),q=new THREE.Quaternion(),p=new THREE.Vector3(),s3=new THREE.Vector3();
   let k=0;
   for(let i=0;i<24;i++){
-    const th=-0.5+i/23*2.2,r=game.rnd(470,560),R=game.rnd(90,150),Hh=game.rnd(60,120);
+    const th=-0.5+i/23*2.2,r=game.rnd(980,1120),R=game.rnd(110,180),Hh=game.rnd(70,140);
     p.set(-r*Math.cos(th),0,-75+r*Math.sin(th));s3.set(R,Hh,R);q.setFromAxisAngle(new THREE.Vector3(0,1,0),game.rnd(0,3));
     hills.setMatrixAt(k,m4.compose(p,q,s3));hills.setColorAt(k,col.setHex(i%3?0x4f8a66:0x44795a));k++;
   }
   for(let i=0;i<22;i++){
-    const a=i/22*6.283,r=game.rnd(560,680),R=game.rnd(90,160);
+    const a=i/22*6.283,r=game.rnd(1040,1220),R=game.rnd(100,170);
     p.set(Math.cos(a)*r,0,-75+Math.sin(a)*r);s3.set(R,game.rnd(18,42),R);q.identity();
     hills.setMatrixAt(k,m4.compose(p,q,s3));hills.setColorAt(k,col.setHex(0x6fa070));k++;
   }
@@ -302,7 +305,9 @@ const bgrid=new Map();
 }
 // Popisky míst
 game.M.LM.forEach(([name,x,z])=>{
-  game.placeLabel(game.label(name,name==='Hasiči'||name==='Obecní úřad'?'#ffd0d0':(name==='Škola'?'#fff2a0':'#bfe8ff'),0.9),x,name==='Hasiči'?11.5:9,z);
+  const ves=/Lhota|Lipiny|zámek/.test(name),mist=/Šerka|Jirsák|Březina|jezírka|Čížek|Holdon|Zelnice|spraších|skálou/.test(name);
+  const col=ves?'#ffe9a0':mist?'#e7ffc2':(name==='Hasiči'||name==='Obecní úřad'?'#ffd0d0':(name==='Škola'?'#fff2a0':'#bfe8ff'));
+  game.placeLabel(game.label(name,col,ves?1.2:mist?1:0.9),x,ves?16:mist?12:(name==='Hasiči'?11.5:9),z);
 });
 
 
@@ -400,10 +405,10 @@ export function initStromyKvetiny() {
 }
 {
   const trunks=[],spruce1=[],spruce2=[],round=[];
+  const [ox0,ox1,oz0,oz1]=game.M.region;
   for(let i=0,tries=0;i<300&&tries<5000;tries++){
-    const x=game.rnd(game.RX0,game.RX1),z=game.rnd(game.RZ0,game.RZ1),s=game.rnd(0.8,1.4);
+    const x=game.rnd(ox0+6,ox1-6),z=game.rnd(oz0+6,oz1-6),s=game.rnd(0.8,1.4);
     if(!game.freeAt(x,z,3.5)||game.nearRoad(x,z,2.5))continue;
-    if(x<game.RX0+10||x>game.RX1-10||z<game.RZ0+10||z>game.RZ1-10)continue;
     if(Math.abs(x-game.H.x)<22&&Math.abs(z-game.H.z)<24)continue;
     if(Math.abs(x-game.PAST.x)<20&&Math.abs(z-game.PAST.z)<20)continue;
     const y=game.gy(x,z);
@@ -417,6 +422,88 @@ export function initStromyKvetiny() {
   game.instanced(cg,game.white,spruce1,true);game.instanced(cg,game.white,spruce2,true);
   const sg=new THREE.IcosahedronGeometry(0.5,1);sg.translate(0,0.5,0);
   game.instanced(sg,game.white,round,true);
+}
+{
+  const [ox0,ox1,oz0,oz1]=game.M.region;
+  const meadow=[];
+  const inMeadow=(x,z)=>x>game.RX0+18&&x<game.RX1-18&&z>game.RZ0+18&&z<game.RZ1-18&&(x<ox0-8||x>ox1+8||z<oz0-8||z>oz1+8);
+  const trunks=[],spruce1=[],spruce2=[],round=[],bush=[],rock=[],hay=[],crop=[];
+  const treeAt=(x,z,s,i)=>{
+    if(!inMeadow(x,z)||!game.freeAt(x,z,2))return false;
+    const y=game.gy(x,z);
+    trunks.push({x,y,z,sx:0.7*s,sy:2.4*s,sz:0.7*s,color:0x7a4a22});
+    if(i%4===0)round.push({x,y:y+1.6*s,z,sx:4.2*s,sy:4.2*s,sz:4.2*s,color:[0x3a9a3a,0x52b040,0x2f8a3a][i%3]});
+    else{spruce1.push({x,y:y+1.6*s,z,sx:4.4*s,sy:3.6*s,sz:4.4*s,color:0x1f7a2e});spruce2.push({x,y:y+3.6*s,z,sx:3.2*s,sy:3.2*s,sz:3.2*s,color:0x2a9038});}
+    game.addCircObs(x,z,0.75*s);
+    return true;
+  };
+  const grove=(cx,cz,n)=>{
+    let got=0;
+    for(let k=0;k<n*3&&got<n;k++){
+      const x=cx+game.rnd(-18,18),z=cz+game.rnd(-18,18);
+      if(treeAt(x,z,game.rnd(0.85,1.45),got))got++;
+    }
+    if(got>2)meadow.push({x:cx,z:cz,k:'tree'});
+  };
+  [[game.RX0+46,game.RZ0+46],[game.RX1-46,game.RZ0+46],[game.RX0+46,game.RZ1-46],[game.RX1-46,game.RZ1-46]].forEach(([x,z])=>grove(x,z,18));
+  for(let g=0,t=0;g<28&&t<600;t++){
+    const x=game.rnd(game.RX0+36,game.RX1-36),z=game.rnd(game.RZ0+36,game.RZ1-36);
+    if(!inMeadow(x,z))continue;
+    grove(x,z,7+(t%6));
+    g++;
+  }
+  for(let i=0,t=0;i<160&&t<1000;t++){
+    const x=game.rnd(game.RX0+22,game.RX1-22),z=game.rnd(game.RZ0+22,game.RZ1-22);
+    if(!inMeadow(x,z)||!game.freeAt(x,z,1.2))continue;
+    const y=game.gy(x,z),s=game.rnd(0.7,1.35);
+    bush.push({x,y,z,sx:1.7*s,sy:1.15*s,sz:1.7*s,color:i%2?0x3c9a34:0x2f7a2c});
+    i++;
+  }
+  for(let i=0,t=0;i<55&&t<400;t++){
+    const x=game.rnd(game.RX0+26,game.RX1-26),z=game.rnd(game.RZ0+26,game.RZ1-26);
+    if(!inMeadow(x,z)||!game.freeAt(x,z,1.6))continue;
+    const y=game.gy(x,z),s=game.rnd(0.85,1.7);
+    rock.push({x,y,z,sx:1.6*s,sy:game.rnd(0.55,1.15)*s,sz:1.45*s,color:i%3?0x8b8f88:0x6e726c});
+    game.addCircObs(x,z,0.7*s);
+    i++;
+  }
+  for(let g=0,t=0;g<16&&t<240;t++){
+    const x=game.rnd(game.RX0+30,game.RX1-30),z=game.rnd(game.RZ0+30,game.RZ1-30);
+    if(!inMeadow(x,z))continue;
+    let n=0;
+    for(let k=0;k<4;k++){
+      const hx=x+game.rnd(-3.2,3.2),hz=z+game.rnd(-3.2,3.2);
+      if(!inMeadow(hx,hz)||!game.freeAt(hx,hz,1.1))continue;
+      hay.push({x:hx,y:game.gy(hx,hz),z:hz,sx:1.4,sy:0.9,sz:0.95,ry:game.rnd(0,3.14),color:k%2?0xd7a441:0xc4842a});
+      game.addCircObs(hx,hz,0.7);
+      n++;
+    }
+    if(n){meadow.push({x,z,k:'hay'});g++;}
+  }
+  for(let g=0,t=0;g<14&&t<220;t++){
+    const x=game.rnd(game.RX0+40,game.RX1-40),z=game.rnd(game.RZ0+40,game.RZ1-40);
+    if(!inMeadow(x,z)||!game.freeAt(x,z,7))continue;
+    const wheat=g%2===0;
+    let n=0;
+    for(let i=0;i<6;i++)for(let j=0;j<4;j++){
+      const px=x-5+i*2,pz=z-3+j*2;
+      if(!inMeadow(px,pz))continue;
+      crop.push({x:px,y:game.gy(px,pz),z:pz,sx:1.05,sy:wheat?0.72:0.95,sz:1.05,color:wheat?((i+j)%2?0xe6c84a:0xc9a63a):((i+j)%3?0x8fd05a:0x6fb04a)});
+      n++;
+    }
+    if(n>8){meadow.push({x,z,k:wheat?'wheat':'field'});g++;}
+  }
+  if(trunks.length)game.instanced(game.unitBox,game.white,trunks,true);
+  if(hay.length)game.instanced(game.unitBox,game.white,hay,true);
+  const cg=new THREE.ConeGeometry(0.5,1,8);cg.translate(0,0.5,0);
+  if(spruce1.length)game.instanced(cg,game.white,spruce1,true);
+  if(spruce2.length)game.instanced(cg,game.white,spruce2,true);
+  const sg=new THREE.IcosahedronGeometry(0.5,1);sg.translate(0,0.5,0);
+  if(round.length)game.instanced(sg,game.white,round,true);
+  if(bush.length)game.instanced(sg,game.white,bush,true);
+  if(rock.length)game.instanced(sg,game.white,rock,true);
+  if(crop.length)game.instanced(sg,game.white,crop,true);
+  bind(game,'meadow',()=>meadow);
 }
 
 
@@ -453,7 +540,7 @@ function updateDay(dt){
   top.lerp(gray,wk*0.75);mid.lerp(gray,wk*0.75);hor.lerp(gray,wk*0.65+W.fog*0.2);
   game.skyU.top.value.copy(top);game.skyU.mid.value.copy(mid);game.skyU.hor.value.copy(hor);
   game.scene.background.copy(hor);game.scene.fog.color.copy(hor);
-  game.scene.fog.near=120-wk*110;game.scene.fog.far=620-W.rain*260-W.fog*440;
+  game.scene.fog.near=140-wk*120;game.scene.fog.far=1100-W.rain*280-W.fog*480;
   sunDir.set(-ce,e,-0.35).normalize();moonDir.set(ce,-e,0.35).normalize();
   lightDir.copy(e>=0?sunDir:moonDir);lightDir.y=Math.max(lightDir.y,0.3);lightDir.normalize().multiplyScalar(100);
   const si=e>=0?0.85*game.clamp(e*2.4,0,1)+0.12:0.32*game.clamp(-e*3,0,1)+0.14;

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { MAP } from '../mapdata.js';
+import { OKOLI, OKOLI_R, OKOLI_LM } from '../map-okoli.js';
 import { game, bind, bindLet } from './context.js';
 import { initTerenSkutecneVyskyLegoStyl, initOblohaHoryMrakyHvezdy, initStavbyPomocne, initBolehostPodleMapyOpenstreetmap, initGarazeSouseduPsiByk, initDomov, initStromyKvetiny, initDenNocAPocasi, initTownTick, api as world } from './world.js';
 import { initPostavy, initHracAVozidla, initVstup, initPlayerMotion, api as player } from './player.js';
@@ -9,6 +10,10 @@ import { initMinimapa, initVelkaMapaKlikNaMinimapuNeboKlavesaN, initHud, initMod
 import { initStavHryUkladani, initMiseAlbumOdznaky, initInterakce, initPosilovace, api as state } from './game.js';
 import { initExtras, api as extras } from './extras.js';
 import { initRound, api as round } from './round.js';
+
+MAP.B.push(...OKOLI);
+MAP.R.push(...OKOLI_R);
+MAP.LM.push(...OKOLI_LM);
 
 function initZaklad() {
 /* Základ */
@@ -20,12 +25,12 @@ const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
 const FOG=0xcfe8ff;
 const M=MAP,H={x:M.H[0],z:M.H[1]};
 const PAST=M.PAST?{x:M.PAST[0],z:M.PAST[1]}:{x:H.x+90,z:H.z};
-const MAP_PAD=80;
+const MAP_PAD=250;
 const [rx0,rx1,rz0,rz1]=M.region;
 const RX0=rx0-MAP_PAD,RX1=rx1+MAP_PAD,RZ0=rz0-MAP_PAD,RZ1=rz1+MAP_PAD;
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(FOG);
-scene.fog=new THREE.Fog(FOG,120,620);
+scene.fog=new THREE.Fog(FOG,140,1100);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);

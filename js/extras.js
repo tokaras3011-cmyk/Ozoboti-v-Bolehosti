@@ -29,7 +29,19 @@ const PLACE_FACTS={
   'Baba':'Rybník Baba je jeden z rybníků kolem obce – dál jsou Malý a Velký Nadýmač a Nebeský.',
   'Malý Nadýmač':'Malý a Velký Nadýmač jsou rybníky hned u vsi.',
   'Velký Nadýmač':'Velký Nadýmač je největší rybník přímo u Bolehoště.',
-  'Nebeský':'Rybník Nebeský leží severně od vsi.'
+  'Nebeský':'Rybník Nebeský leží severně od vsi.',
+  'Lipiny':'Osada Lipiny vznikla roku 1709. SK Sokol Lipiny tu pořádá jezdecké a vozatajské závody.',
+  'Bolehošťská Lhota':'Lhota je jedna ze tří částí obce. Stojí tu škola a nad ní lovecký zámeček rodu Colloredů z roku 1700.',
+  'Lovecký zámek':'Lovecký zámeček rodu Colloredů nad Bolehošťskou Lhotou byl postaven v roce 1700.',
+  'Šerka':'Pomístní jméno mezi Bolehoští a Bolehošťskou Lhotou.',
+  'Jirsákův kopec':'Kopec východně od Bolehošťské Lhoty. Tak se to místo jmenuje v mapě.',
+  'Březina':'Pomístní jméno v polích jižně od obce.',
+  'U jezírka':'Pomístní jméno jihozápadně od Lipin.',
+  'Čížek':'Pomístní jméno u osady Lipiny.',
+  'Holdon':'Pomístní jméno mezi Lipinami a Bolehoští.',
+  'Zelnice':'Pomístní jméno na severním okraji katastru.',
+  'Na spraších':'Pomístní jméno severně od vsi. Spraše jsou naváté úrodné půdy.',
+  'Pod skálou':'Pomístní jméno na severovýchodě katastru.'
 };
 const TICKER_FACTS=[
   'Obec Bolehošť slavila v roce 2024 630 let od založení (první zmínka 1394).',
@@ -372,7 +384,7 @@ export function initExtras(){
   /* ---------- Objevování míst a zajímavosti ---------- */
   const DISC=[];
   MAP.PLACES.forEach(p=>DISC.push({id:p.id,name:p.n,x:p.x,z:p.z,r:p.id==='pole'?14:9,fact:PLACE_FACTS[p.id]}));
-  game.M.LM.forEach(l=>{if(PLACE_FACTS[l[0]])DISC.push({id:'lm:'+l[0],name:l[0],x:l[1],z:l[2],r:/Nadýmač|Baba|Nebeský/.test(l[0])?16:9,fact:PLACE_FACTS[l[0]]})});
+  game.M.LM.forEach(l=>{if(PLACE_FACTS[l[0]])DISC.push({id:'lm:'+l[0],name:l[0],x:l[1],z:l[2],r:/Lhota|Lipiny/.test(l[0])?30:/zámek|Šerka|Jirsák|Březina|jezírka|Čížek|Holdon|Zelnice|spraších|skálou|Nadýmač|Baba|Nebeský/.test(l[0])?18:9,fact:PLACE_FACTS[l[0]]})});
   function checkDiscover(){
     if(!game.S.visited)game.S.visited={};
     for(const d of DISC){

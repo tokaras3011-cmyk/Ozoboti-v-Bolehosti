@@ -24,4 +24,5 @@ Hra už není jeden velký skript uvnitř `index.html`. Prohlížeč načte modu
 - Jméno je hned nad hlavou postavy, i když sedí ve vozidle.
 - Chycení Ozoboti jsou řada barevných puntíků na zemi pod postavou.
 - Z mapy jsou pryč malé barevné kostičky, které stály místo květin.
-- Kolem vesnice je větší louka, kam se dá dojít. Konec označuje červeno-bílý plot, nápis **KONEC MAPY** a červený okraj na minimapě i na velké mapě. U plotu se objeví hláška, že tady mapa končí.
+- Kolem vesnice je louka asi půl kilometru na každou stranu. Jsou na ní háje, keře, kameny, balíky sena a políčka. Tam, kde na skutečné mapě stojí domy, jsou i ve hře, včetně cest k nim.
+- Mimo střed obce jsou popsané osady Lipiny a Bolehošťská Lhota, lovecký zámek a pomístní jména z mapy (Šerka, Jirsákův kopec, Zelnice a další). Když k nim dojdeš, hra řekne, co to je. Konec označuje červeno-bílý plot, nápis **KONEC MAPY** a červený okraj na minimapě i na velké mapě. U plotu se objeví hláška, že tady mapa končí. Ozoboti zůstávají v obci.

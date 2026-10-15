@@ -19,6 +19,7 @@ const miniBase=document.createElement('canvas');miniBase.width=mini.width;miniBa
   game.M.R.forEach(([k,p])=>{g.strokeStyle=k?'#b99a66':'#fff';g.lineWidth=k?1:2.2;g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke()});
   game.M.B.forEach(b=>{const [a,c]=mm(b[0],b[1]);g.fillStyle=b[5]===2?'#e04030':b[5]===3?'#e0b000':'#8a7a6a';g.fillRect(a-1.5,c-1.5,3,3)});
   g.font='bold 10px Arial';g.fillStyle='#124';game.M.LM.forEach(([n,x,z])=>{const [a,b]=mm(x,z);g.fillText(n,a+4,b-3)});
+  (game.meadow||[]).forEach(m=>{const [a,b]=mm(m.x,m.z);g.fillStyle=m.k==='tree'?'#246b2e':m.k==='hay'?'#c9842a':m.k==='wheat'?'#d7b23a':'#5ea044';g.beginPath();g.arc(a,b,m.k==='tree'?3:2,0,7);g.fill()});
   g.strokeStyle='#e23b2b';g.lineWidth=4;g.strokeRect(2,2,miniBase.width-4,miniBase.height-4);
 }
 function drawMini(){
@@ -62,8 +63,13 @@ function buildBig(){
     g.fillRect(-b[2]*k/2,-b[3]*k/2,b[2]*k,b[3]*k);g.restore();
   });
   g.textAlign='center';
-  game.M.LM.forEach(([n,x,z])=>{const[a,b]=bigP(x,z);halo(g,n,a,b-6,/Nadýmač|Baba|Nebeský/.test(n)?'#0a5aa8':'#8a1a10','bold 15px Segoe UI,Arial')});
+  game.M.LM.forEach(([n,x,z])=>{
+    const[a,b]=bigP(x,z);
+    const ves=/Lhota|Lipiny|zámek/.test(n),mist=/Šerka|Jirsák|Březina|jezírka|Čížek|Holdon|Zelnice|spraších|skálou/.test(n);
+    halo(g,n,a,b-6,ves?'#7a4a00':mist?'#2f6a28':(/Nadýmač|Baba|Nebeský/.test(n)?'#0a5aa8':'#8a1a10'),ves?'bold 17px Segoe UI,Arial':'bold 15px Segoe UI,Arial');
+  });
   MAP.PLACES.forEach(p=>{const[a,b]=bigP(p.x,p.z);g.fillStyle='#1a6a2a';g.beginPath();g.arc(a,b,4,0,7);g.fill();halo(g,p.n+(p.approx?' *':''),a,b-8,'#14501e','bold 14px Segoe UI,Arial')});
+  (game.meadow||[]).forEach(m=>{const[a,b]=bigP(m.x,m.z);g.fillStyle=m.k==='tree'?'#246b2e':m.k==='hay'?'#c9842a':m.k==='wheat'?'#d7b23a':'#5ea044';g.beginPath();g.arc(a,b,m.k==='tree'?7:4.5,0,7);g.fill()});
   // legenda
   g.textAlign='left';  g.fillStyle='#fffd';g.fillRect(8,8,300,140);g.strokeStyle='#789';g.lineWidth=1;g.strokeRect(8,8,300,140);
   g.font='bold 13px Segoe UI,Arial';g.fillStyle='#123';

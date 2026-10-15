@@ -38,7 +38,7 @@ function randomFree(){
   for(let t=0;t<60;t++){
     let x,z;
     if(Math.random()<0.75){const b=game.M.B[(Math.random()*game.M.B.length)|0],a=game.rnd(0,6.28),r=Math.max(b[2],b[3])/2+game.rnd(2.5,10);x=b[0]+Math.cos(a)*r;z=b[1]+Math.sin(a)*r}
-    else{x=game.rnd(game.RX0,game.RX1);z=game.rnd(game.RZ0,game.RZ1)}
+    else{const [a,b,c,d]=game.M.region;x=game.rnd(a+6,b-6);z=game.rnd(c+6,d-6)}
     if(x<game.RX0+3||x>game.RX1-3||z<game.RZ0+3||z>game.RZ1-3)continue;
     if(!game.freeAt(x,z,1.5))continue;
     if(Math.abs(x-game.H.x)<19&&Math.abs(z-game.H.z)<19)continue;

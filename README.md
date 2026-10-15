@@ -68,6 +68,7 @@ Ikona klávesnice vpravo dole otevře tabulku. Zkráceně:
 | `js/` | moduly hry (svět, hráč, Ozoboti, kolize, obrazovka, stav, místa, kolo) |
 | `css/` | vzhled hry a stránky učitele |
 | `mapdata.js` | mapa (budovy, silnice, voda, výšky, místa) |
+| `map-okoli.js` | domy a cesty z OpenStreetMap v louce kolem obce |
 | `CHANGELOG.md` | co se ve hře měnilo |
 | `server.py` | server režimu kola (jen standardní knihovna Pythonu) |
 | `ucitel.html` | ovládání kola pro učitele |
