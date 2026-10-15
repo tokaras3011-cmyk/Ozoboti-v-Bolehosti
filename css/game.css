@@ -1,0 +1,70 @@
+  html,body{margin:0;height:100%;overflow:hidden;background:#cfe8ff;font-family:"Segoe UI",Arial,sans-serif;user-select:none}
+  canvas{display:block}
+  #vign{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 60%,#0a1a3a55 100%)}
+  .hud{position:fixed;color:#fff;font-weight:800;text-shadow:0 2px 0 #000,0 0 6px #0008;pointer-events:none}
+  #money{left:24px;bottom:20px;font-size:54px;color:#7dffb0;-webkit-text-stroke:2px #06452a}
+  #stats{left:24px;bottom:95px;font-size:22px;line-height:1.3}
+  #who{left:18px;top:12px;font-size:21px;line-height:1.3}
+  #who button{pointer-events:auto;font-size:13px;padding:4px 10px;margin:4px 4px 0 0;background:#0008;border:1px solid #fff6}
+  #missions{left:18px;top:118px;font-size:14px;line-height:1.35;max-width:290px;background:#0a1a3a88;padding:6px 10px;border-radius:10px;font-weight:700}
+  #missions .done{color:#7dffb0;text-decoration:line-through}
+  #clock{left:50%;top:10px;transform:translateX(-50%);font-size:20px;text-align:center}
+  #compass{left:50%;top:44px;transform:translateX(-50%);font-size:15px;text-align:center;display:none}
+  #compass span{display:inline-block;font-size:26px;color:#ff9ad8}
+  #prompt{left:50%;bottom:118px;transform:translateX(-50%);font-size:26px;background:#0009;padding:8px 22px;border-radius:12px;display:none;white-space:nowrap}
+  #toast{left:50%;top:92px;transform:translateX(-50%);font-size:26px;opacity:0;transition:opacity .3s;text-align:center;width:80%}
+  #help{position:fixed;right:16px;bottom:12px;z-index:40;width:52px;height:52px;padding:0;border-radius:50%;border:2px solid #fff;background:#0a1a3acc;box-shadow:0 2px 10px #0008;display:flex;align-items:center;justify-content:center}
+  #help:hover{background:#1565c0}
+  #modal{z-index:60}
+  .ctrl{width:100%;border-collapse:collapse}
+  .ctrl th{text-align:left;color:#0a6bd8;font-size:14px;padding:0 10px 8px}
+  .ctrl td{padding:8px 10px;border-top:1px solid #e3e3e3;font-size:16px;font-weight:600;vertical-align:middle}
+  .ctrl td:first-child{white-space:nowrap;width:1%}
+  .ctrl kbd{display:inline-block;min-width:1.4em;margin:0 3px 0 0;padding:2px 8px;border-radius:8px;border:1px solid #c5d0e0;border-bottom-width:3px;background:#eef3fa;font:inherit;font-weight:800;text-align:center}
+  #slots{left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;align-items:flex-end}
+  .slot{width:70px;height:72px;background:#0a1a3acc;border:2px solid #fff8;border-radius:12px;text-align:center;font-size:11px;line-height:1.15;padding-top:4px;box-sizing:border-box;overflow:hidden;white-space:nowrap}
+  .slot b{display:block;font-size:24px;line-height:1.1}
+  .slot.off{opacity:.45}
+  .slot.on{border-color:#7dffb0;box-shadow:0 0 12px #7dffb0}
+  #stam{left:50%;bottom:92px;transform:translateX(-50%);width:210px;height:12px;background:#0008;border-radius:8px;overflow:hidden;border:2px solid #fff7}
+  #stamf{height:100%;width:100%;background:linear-gradient(90deg,#ffb347,#ffe94a)}
+  #start,#modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1a4a8a99,#0a1a3acc)}
+  #modal{display:none;background:#0006}
+  .card{background:#fff;color:#222;border-radius:18px;padding:22px 30px;max-width:760px;width:calc(100% - 30px);box-shadow:0 10px 40px #0007;max-height:94vh;overflow:auto}
+  .card h1{margin:0 0 4px;font-size:32px;color:#0a6bd8}
+  .card h2{margin:0 0 12px}
+  .card h3{margin:14px 0 6px;font-size:17px;color:#0a6bd8}
+  .card p,.card li{font-size:16px;line-height:1.4}
+  button{font:inherit;font-weight:800;border:0;border-radius:12px;padding:10px 20px;background:#1e88e5;color:#fff;cursor:pointer;font-size:18px}
+  button:hover{background:#1565c0}
+  button:disabled{background:#b0b7c0;cursor:not-allowed}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid #e3e3e3}
+  .row small{display:block;color:#666;font-size:13px}
+  .row b{font-size:17px}
+  .row button{font-size:16px;padding:8px 14px;white-space:nowrap}
+  #setup{display:flex;gap:22px;flex-wrap:wrap}
+  #setup>div{flex:1 1 280px}
+  #name{width:100%;box-sizing:border-box;font:inherit;font-size:22px;font-weight:700;padding:8px 12px;border:3px solid #1e88e5;border-radius:12px;margin:4px 0 10px}
+  #chars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .ch{padding:4px;background:#eef3fa;border:3px solid transparent;border-radius:12px;font-size:12px;color:#223;text-align:center}
+  .ch:hover{background:#dbe8fb}.ch.sel{border-color:#1e88e5;background:#d2e6ff}
+  .ch img{width:100%;display:block}
+  #swatches{display:flex;gap:8px;margin:6px 0 10px;flex-wrap:wrap}
+  .sw{width:30px;height:30px;padding:0;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #8897aa}
+  .sw.sel{box-shadow:0 0 0 4px #1e88e5}
+  #prevwrap{text-align:center}
+  #prev{width:220px;height:250px;background:linear-gradient(#bfe3ff,#e8f6ff);border-radius:14px}
+  .chip{display:inline-block;background:#e4eefc;border-radius:20px;padding:3px 12px;margin:2px 4px 2px 0;font-size:14px;cursor:pointer;font-weight:700}
+  .chip:hover{background:#c9dcf8}
+  #board{font-size:14px;margin:2px 0;color:#345}
+  .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .dexc{border:2px solid #dde5f0;border-radius:12px;padding:8px;font-size:13px;background:#f6f9fd}
+  .dexc.no{opacity:.5}
+  .led{display:inline-block;width:16px;height:16px;border-radius:50%;vertical-align:middle;margin-right:6px;box-shadow:0 0 8px currentColor}
+  .badge{display:inline-block;border-radius:10px;padding:4px 10px;margin:3px 4px 3px 0;font-size:13px;font-weight:700;background:#eef1f5;color:#8a95a5}
+  .badge.got{background:#fff3c4;color:#6a4a00}
+  .prog{height:8px;background:#e3e9f2;border-radius:6px;overflow:hidden;margin-top:4px}
+  .prog i{display:block;height:100%;background:#36c86a}
+  #bigmap{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:50;cursor:zoom-out}
+  #bigmap canvas{border:4px solid #fff;border-radius:12px;box-shadow:0 8px 40px #000a;max-width:96vw;max-height:96vh}
+  #bigmap .hint{position:absolute;bottom:6px;left:0;right:0;text-align:center;color:#fff;font-size:14px;font-weight:700;text-shadow:0 1px 3px #000}

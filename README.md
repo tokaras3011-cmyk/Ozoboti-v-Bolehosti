@@ -4,7 +4,7 @@
 
 ## Rychlý start – hra jednoho hráče
 
-Stáhněte celou složku a otevřete `index.html` (dvojklik). Soubory `mapdata.js` a `extras.js` musí zůstat vedle něj. Potřebuje internet (knihovna Three.js se načítá z CDN).
+Stáhněte celou složku a otevřete `index.html` (dvojklik). Hra si načte moduly ze složky `js/` a styly z `css/`. Potřebuje internet (knihovna Three.js se načítá z CDN).
 
 > Postup hráče se ukládá v prohlížeči podle jména, na každém počítači zvlášť.
 
@@ -33,11 +33,16 @@ Po zapnutí GitHub Pages (Settings → Pages → větev `main`, složka `/`) pob
 
 ## Ovládání
 
-| Klávesa | Akce |
+Ikona klávesnice vpravo dole otevře tabulku. Zkráceně:
+
+| Ovládání | Akce |
 |---|---|
-| W A S D / šipky | pohyb |
+| W A S D | pohyb |
+| šipky nahoru a dolů | dopředu a dozadu |
+| šipky vlevo a vpravo | otočit se |
 | Mezerník | skok |
 | Shift | sprint (dobíjí se) |
+| + − nebo kolečko myši | přiblížit a oddálit kameru |
 | 1 2 3 | posilovače (magnet, zmražení psa, past) |
 | V | vozidlo (po koupi v obchodě) |
 | E | použít (výkup, obchod, dílna, starosta, závitek…) |
@@ -59,9 +64,11 @@ Po zapnutí GitHub Pages (Settings → Pages → větev `main`, složka `/`) pob
 
 | Soubor | K čemu |
 |---|---|
-| `index.html` | hra |
-| `extras.js` | místní prvky, události, boss, hudba, klient režimu kola |
+| `index.html` | plátno, ukazatele a úvod. Herní kód tu není |
+| `js/` | moduly hry (svět, hráč, Ozoboti, kolize, obrazovka, stav, místa, kolo) |
+| `css/` | vzhled hry a stránky učitele |
 | `mapdata.js` | mapa (budovy, silnice, voda, výšky, místa) |
+| `CHANGELOG.md` | co se ve hře měnilo |
 | `server.py` | server režimu kola (jen standardní knihovna Pythonu) |
 | `ucitel.html` | ovládání kola pro učitele |
 | `spustit-server.bat` | spuštění serveru ve Windows |
