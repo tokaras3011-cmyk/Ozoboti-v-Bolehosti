@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# I když jde požadavek rovnou na soubor hry, pustí ho jen brána po hesle.
+RewriteRule ^ /index.php [END]
+
+<FilesMatch "^(config\.local\.php|server\.py|.*\.bat)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Deny from all
+    </IfModule>
+</FilesMatch>

@@ -1,17 +1,19 @@
 import * as THREE from 'three';
 import { MAP } from '../mapdata.js';
-import { OKOLI, OKOLI_R, OKOLI_LM } from '../map-okoli.js';
+import { BUDOVY } from '../map-budovy.js';
+import { OKOLI_R, OKOLI_LM } from '../map-okoli.js';
 import { game, bind, bindLet } from './context.js';
 import { initTerenSkutecneVyskyLegoStyl, initOblohaHoryMrakyHvezdy, initStavbyPomocne, initBolehostPodleMapyOpenstreetmap, initGarazeSouseduPsiByk, initDomov, initStromyKvetiny, initDenNocAPocasi, initTownTick, api as world } from './world.js';
-import { initPostavy, initHracAVozidla, initVstup, initPlayerMotion, api as player } from './player.js';
+import { initPostavy, initHracAVozidla, initVstup, initPlayerMotion, api as player } from './player.js?v=5';
 import { initOzoboti, initRobotAi, initSvetOzoboti, api as robots } from './robots.js';
 import { initKolize, api as collision } from './collision.js';
-import { initMinimapa, initVelkaMapaKlikNaMinimapuNeboKlavesaN, initHud, initModalniOkna, initUvodniObrazovka, api as hud } from './hud.js';
+import { initMinimapa, initVelkaMapaKlikNaMinimapuNeboKlavesaN, initHud, initModalniOkna, initUvodniObrazovka, api as hud } from './hud.js?v=5';
 import { initStavHryUkladani, initMiseAlbumOdznaky, initInterakce, initPosilovace, api as state } from './game.js';
-import { initExtras, api as extras } from './extras.js';
-import { initRound, api as round } from './round.js';
+import { initExtras, api as extras } from './extras.js?v=5';
+import { initRound, api as round } from './round.js?v=4';
+import { initPresence, api as presence } from './presence.js?v=4';
 
-MAP.B.push(...OKOLI);
+MAP.B.splice(0, MAP.B.length, ...BUDOVY);
 MAP.R.push(...OKOLI_R);
 MAP.LM.push(...OKOLI_LM);
 
@@ -35,6 +37,7 @@ const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.domElement.style.touchAction='none';
 document.body.insertBefore(renderer.domElement,document.body.firstChild);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.1,1800);
 const hemi=new THREE.HemisphereLight(0xdff0ff,0x5a8a3a,0.75);scene.add(hemi);
@@ -89,6 +92,7 @@ function startLoop(){
         game.workRobot.lm.color.copy(game.tmp);
         game.workRobot.gm.color.copy(game.tmp);
       }
+      presence.tick(dt);
       hudT+=dt;
       if(hudT>0.25){
         hudT=0; game.refreshHud();
@@ -139,6 +143,7 @@ function startLoop(){
   initTownTick();
   initExtras();
   initRound();
+  initPresence();
   initUvodniObrazovka();
   initSvetOzoboti();
   startLoop();

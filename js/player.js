@@ -117,9 +117,42 @@ function setVehicle(i){
   else av.g.position.set(0,0,0);
 }
 const veh=()=>curVeh>=0?VEH[curVeh]:null;
+function buildRemote(charId,color,name){
+  const ch=game.CHARS.find(c=>c.id===charId)||game.CHARS[0];
+  const g=new THREE.Group();
+  g.scale.setScalar(0.6);
+  const holder=new THREE.Group();
+  g.add(holder);
+  const avatar=game.buildAvatar(ch,color);
+  g.add(avatar.g);
+  const tag=game.label(String(name||''),'#ffffff',0.5);
+  tag.position.set(0,5.15,0);
+  avatar.g.add(tag);
+  const hour=game.label('⏳','#ffe08a',0.55);
+  hour.position.set(0,6.55,0);
+  hour.visible=false;
+  avatar.g.add(hour);
+  const remote={g,av:avatar,hour,wheels:[],veh:-1};
+  remote.setVeh=i=>{
+    remote.veh=i;
+    holder.clear();
+    remote.wheels=[];
+    const v=i>=0&&i<VEH.length?VEH[i]:null;
+    if(v){
+      const m=makeVeh(v.id);
+      holder.add(m.g);
+      remote.wheels=m.wheels;
+      avatar.g.position.set(0,v.seat[0],v.seat[1]);
+      avatar.legL.rotation.x=avatar.legR.rotation.x=v.legs;
+      avatar.armL.rotation.x=avatar.armR.rotation.x=v.arms;
+    }else avatar.g.position.set(0,0,0);
+  };
+  return remote;
+}
 
 
   bind(game, "VEH", () => VEH);
+  bind(game, "buildRemote", () => buildRemote);
   bind(game, "aura", () => aura);
   bindLet(game, "av", () => av, (v) => { av = v; });
   bind(game, "carryGroup", () => carryGroup);
@@ -161,6 +194,7 @@ addEventListener('keydown',e=>{
   }
 });
 addEventListener('keyup',e=>keys[e.code]=false);
+const stick={x:0,y:0,on:false};
 let yaw=Math.PI,pitch=0.42,dragging=false,zoom=1,zoomT=1;
 function nudgeZoom(d){if(game.modalOpen||game.bigOpen)return;zoomT=game.clamp(zoomT+d,0.42,2.4)}
 addEventListener('wheel',e=>{
@@ -169,17 +203,91 @@ addEventListener('wheel',e=>{
   const dy=e.deltaMode===1?e.deltaY*32:e.deltaY;
   nudgeZoom(game.clamp(dy,-140,140)*0.0015);
 },{passive:false});
-game.renderer.domElement.addEventListener('mousedown',()=>dragging=true);
+game.renderer.domElement.addEventListener('mousedown',e=>{
+  if(e.sourceCapabilities&&e.sourceCapabilities.firesTouchEvents)return;
+  dragging=true;
+});
 addEventListener('mouseup',()=>dragging=false);
-addEventListener('mousemove',e=>{if(!dragging)return;yaw-=e.movementX*0.006;pitch=game.clamp(pitch+e.movementY*0.005,0.08,1.2)});
+addEventListener('mousemove',e=>{if(!dragging||e.pointerType==='touch')return;yaw-=e.movementX*0.006;pitch=game.clamp(pitch+e.movementY*0.005,0.08,1.2)});
+setupTouch();
 
 
   bind(game, "keys", () => keys);
+  bind(game, "stick", () => stick);
   bindLet(game, "pitch", () => pitch, (v) => { pitch = v; });
   bindLet(game, "started", () => started, (v) => { started = v; });
   bindLet(game, "yaw", () => yaw, (v) => { yaw = v; });
   bindLet(game, "zoom", () => zoom, (v) => { zoom = v; });
   bindLet(game, "zoomT", () => zoomT, (v) => { zoomT = v; });
+
+  function setupTouch(){
+    const coarse=navigator.maxTouchPoints>0||matchMedia('(pointer: coarse)').matches||matchMedia('(hover: none)').matches;
+    if(!coarse)return;
+    const root=document.createElement('div');
+    root.id='touch';
+    root.innerHTML='<div id="stick"><div id="knob"></div></div><p id="thint">Páčka = chůze, prst po hřišti = otáčení</p><div id="tacts"><button type="button" id="tjump">Skok</button><button type="button" id="trun">Běh</button><button type="button" id="tact">Akce</button></div>';
+    document.body.appendChild(root);
+    const pad=root.querySelector('#stick'),knob=root.querySelector('#knob');
+    let stickId=null,lookId=null,lx=0,ly=0;
+    const show=()=>{document.body.classList.toggle('touch-play',!!started&&!game.bigOpen)};
+    setInterval(show,300);show();
+    function stickAt(e){
+      const b=pad.getBoundingClientRect(),max=b.width*0.36;
+      let dx=e.clientX-(b.left+b.width/2),dy=e.clientY-(b.top+b.height/2);
+      const dist=Math.hypot(dx,dy)||1;
+      if(dist>max){dx*=max/dist;dy*=max/dist}
+      knob.style.transform='translate('+dx+'px,'+dy+'px)';
+      const nx=dx/max,ny=dy/max;
+      if(Math.hypot(nx,ny)<0.16){stick.x=0;stick.y=0;stick.on=false}
+      else{stick.x=nx;stick.y=ny;stick.on=true}
+    }
+    function stickEnd(){stickId=null;stick.x=0;stick.y=0;stick.on=false;knob.style.transform='translate(0,0)'}
+    pad.addEventListener('pointerdown',e=>{
+      if(!started||game.modalOpen)return;
+      stickId=e.pointerId;try{pad.setPointerCapture(e.pointerId)}catch(err){}stickAt(e);e.preventDefault();e.stopPropagation();
+    });
+    pad.addEventListener('pointermove',e=>{if(e.pointerId===stickId){stickAt(e);e.preventDefault()}});
+    pad.addEventListener('pointerup',e=>{if(e.pointerId===stickId)stickEnd()});
+    pad.addEventListener('pointercancel',e=>{if(e.pointerId===stickId)stickEnd()});
+    const blocked=t=>t.closest&&t.closest('#stick,#tacts,#help,#mini,#xboard,#slots,#who,#modal,#bigmap,#start,#diploma,button,a,input');
+    addEventListener('pointerdown',e=>{
+      if(!started||game.modalOpen||game.bigOpen||e.pointerType==='mouse')return;
+      if(e.pointerId===stickId||blocked(e.target))return;
+      lookId=e.pointerId;lx=e.clientX;ly=e.clientY;
+    });
+    addEventListener('pointermove',e=>{
+      if(e.pointerId!==lookId)return;
+      const dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
+      yaw-=dx*0.008;pitch=game.clamp(pitch+dy*0.006,0.08,1.2);
+      e.preventDefault();
+    },{passive:false});
+    addEventListener('pointerup',e=>{if(e.pointerId===lookId)lookId=null});
+    addEventListener('pointercancel',e=>{if(e.pointerId===lookId)lookId=null});
+    const hold=(id,code)=>{
+      const b=root.querySelector(id);
+      b.addEventListener('pointerdown',e=>{
+        if(!started)return;
+        try{b.setPointerCapture(e.pointerId)}catch(err){}
+        keys[code]=true;b.classList.add('on');e.preventDefault();e.stopPropagation();
+      });
+      const up=()=>{keys[code]=false;b.classList.remove('on')};
+      b.addEventListener('pointerup',up);
+      b.addEventListener('pointercancel',up);
+    };
+    hold('#tjump','Space');
+    hold('#trun','ShiftLeft');
+    root.querySelector('#tact').addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      if(!started||game.modalOpen)return;
+      if(game.nearest)game.nearest.act();
+      else game.toast('Nic poblíž.','#ffd27a',2);
+    });
+    document.addEventListener('touchmove',e=>{
+      if(!document.body.classList.contains('touch-play'))return;
+      if(e.target.closest&&e.target.closest('#modal,#start,#bigmap,#diploma,#xboard'))return;
+      e.preventDefault();
+    },{passive:false});
+  }
 }
 
 export function initPlayerMotion() {
@@ -195,8 +303,10 @@ function caughtBy(g){
 }
 function tickPlayer(dt){
   const vh=game.veh();
-  const f=(game.keys.KeyW||game.keys.ArrowUp?1:0)-(game.keys.KeyS||game.keys.ArrowDown?1:0);
-  const r=(game.keys.KeyD?1:0)-(game.keys.KeyA?1:0);
+  const st=game.stick||{x:0,y:0,on:false};
+  let f=(game.keys.KeyW||game.keys.ArrowUp?1:0)-(game.keys.KeyS||game.keys.ArrowDown?1:0)-st.y;
+  let r=(game.keys.KeyD?1:0)-(game.keys.KeyA?1:0)+st.x;
+  const pace=Math.min(1,Math.hypot(f,r));
   if(game.keys.ArrowLeft)game.yaw+=1.8*dt;if(game.keys.ArrowRight)game.yaw-=1.8*dt;
   const fx=-Math.sin(game.yaw),fz=-Math.cos(game.yaw),rx=Math.cos(game.yaw),rz=-Math.sin(game.yaw);
   let dx=fx*f+rx*r,dz=fz*f+rz*r;const len=Math.hypot(dx,dz);
@@ -209,7 +319,7 @@ function tickPlayer(dt){
   game.$('stamf').style.width=game.stam+'%';
   if(moving){
     dx/=len;dz/=len;
-    const sp=game.speed()*(vh?vh.mult:1)*(sprinting?(vh?vh.sprint:1.5):1)*game.X.speedMult();
+    const sp=game.speed()*(vh?vh.mult:1)*(sprinting?(vh?vh.sprint:1.5):1)*game.X.speedMult()*pace;
     pv.x+=dx*sp*dt;pv.z+=dz*sp*dt;
     let a=Math.atan2(dx,dz),d=a-pv.face;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;
     pv.face+=d*Math.min(1,dt*(vh&&vh.dogsFear?6:14));walkT+=dt*sp*0.9;
@@ -256,7 +366,7 @@ function tickPets(dt){  const vh=game.veh();
 function tickCamera(dt){
   game.zoom+=(game.zoomT-game.zoom)*Math.min(1,dt*8);
   const vv=game.veh(),cd=(8.5+(vv&&vv.dogsFear?2.5:0))*game.zoom,cx=pv.x+Math.sin(game.yaw)*Math.cos(game.pitch)*cd,gyp=game.gy(pv.x,pv.z)+pv.y,cy=gyp+1.6+Math.sin(game.pitch)*cd,cz=pv.z+Math.cos(game.yaw)*Math.cos(game.pitch)*cd;
-  const moving=game.keys.KeyW||game.keys.KeyS||game.keys.KeyA||game.keys.KeyD;
+  const moving=game.keys.KeyW||game.keys.KeyS||game.keys.KeyA||game.keys.KeyD||(game.stick&&game.stick.on);
   const shake=vv&&vv.id==='valec'&&!game.modalOpen&&moving?Math.sin(time*60)*0.03:0;
   game.camera.position.set(cx,Math.max(game.gy(cx,cz)+0.8,cy)+shake,cz);game.camera.lookAt(pv.x,gyp+1.6,pv.z);
   return {tx:pv.x,tz:pv.z,ty:gyp};

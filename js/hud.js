@@ -16,8 +16,8 @@ const miniBase=document.createElement('canvas');miniBase.width=mini.width;miniBa
   const g=miniBase.getContext('2d');g.fillStyle='#bfe6a0';g.fillRect(0,0,miniBase.width,miniBase.height);
   g.fillStyle='#4aa8ff';game.M.W.forEach(([n,p])=>{g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.fill()});
   g.strokeStyle='#4aa8ff';g.lineWidth=1;game.M.ST.forEach(p=>{g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke()});
-  game.M.R.forEach(([k,p])=>{g.strokeStyle=k?'#b99a66':'#fff';g.lineWidth=k?1:2.2;g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke()});
-  game.M.B.forEach(b=>{const [a,c]=mm(b[0],b[1]);g.fillStyle=b[5]===2?'#e04030':b[5]===3?'#e0b000':'#8a7a6a';g.fillRect(a-1.5,c-1.5,3,3)});
+  game.M.R.forEach(([k,p])=>{g.strokeStyle=k?'#b99a66':'#fff';g.lineWidth=k?1.7:3.2;g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke()});
+  game.M.B.forEach(b=>{const {outer}=game.buildingRings(b);g.fillStyle=b[5]===2?'#e04030':b[5]===3?'#e0b000':'#8a7a6a';g.beginPath();outer.forEach((p,i)=>{const [a,c]=mm(p[0],p[1]);i?g.lineTo(a,c):g.moveTo(a,c)});g.fill()});
   g.font='bold 10px Arial';g.fillStyle='#124';game.M.LM.forEach(([n,x,z])=>{const [a,b]=mm(x,z);g.fillText(n,a+4,b-3)});
   (game.meadow||[]).forEach(m=>{const [a,b]=mm(m.x,m.z);g.fillStyle=m.k==='tree'?'#246b2e':m.k==='hay'?'#c9842a':m.k==='wheat'?'#d7b23a':'#5ea044';g.beginPath();g.arc(a,b,m.k==='tree'?3:2,0,7);g.fill()});
   g.strokeStyle='#e23b2b';g.lineWidth=4;g.strokeRect(2,2,miniBase.width-4,miniBase.height-4);
@@ -28,6 +28,10 @@ function drawMini(){
   dot(game.H.x,game.H.z,'#ffe94a',5);game.garages.forEach(h=>dot(h.x,h.z,'#ff4fb8',3.5));dot(game.PAST.x,game.PAST.z,'#ffb000',5);
   game.robots.forEach(r=>{if(r.alive&&Math.hypot(r.x-game.pv.x,r.z-game.pv.z)<60)dot(r.x,r.z,r.quest?'#ff4fb8':'#'+r.lm.color.getHexString(),r.quest?4:2.6)});
   game.traps.forEach(t=>dot(t.x,t.z,'#22ffee',3));
+  (game.peers||[]).forEach(p=>{
+    dot(p.x,p.z,p.color,4);
+    if(p.away){const [ax,bz]=mm(p.x,p.z);mctx.font='12px Arial';mctx.textAlign='center';mctx.fillStyle='#7a4200';mctx.fillText('⏳',ax,bz-7)}
+  });
   const [a,b]=mm(game.pv.x,game.pv.z);
   mctx.strokeStyle='#ffffff99';mctx.lineWidth=1;mctx.beginPath();mctx.arc(a,b,60*MS,0,7);mctx.stroke();
   mctx.fillStyle='#fff';mctx.strokeStyle='#000';mctx.lineWidth=2;mctx.beginPath();mctx.arc(a,b,5,0,7);mctx.fill();mctx.stroke();
@@ -56,11 +60,12 @@ function buildBig(){
   g.fillStyle='#5ab4ff';game.M.W.forEach(([n,p])=>poly(p,true));
   g.strokeStyle='#5ab4ff';g.lineWidth=Math.max(2,1.4*k);g.lineJoin='round';game.M.ST.forEach(p=>poly(p,false));
   g.lineCap='round';
-  game.M.R.forEach(([kk,p])=>{g.strokeStyle=kk?'#b99a66':'#ffffff';g.lineWidth=(kk?1.8:3.6)*k;poly(p,false)});
+  game.M.R.forEach(([kk,p])=>{g.strokeStyle=kk?'#b99a66':'#ffffff';g.lineWidth=((kk?game.roadHalf[1]:game.roadHalf[0])*2)*k;poly(p,false)});
   game.M.B.forEach(b=>{
-    const[a,d]=bigP(b[0],b[1]);g.save();g.translate(a,d);g.rotate(b[4]);
+    const {outer}=game.buildingRings(b),flat=[];
+    for(const p of outer)flat.push(p[0],p[1]);
     g.fillStyle=b[5]===2?'#e04030':b[5]===3?'#e0b000':b[5]===1?'#a89880':'#8a7a6a';
-    g.fillRect(-b[2]*k/2,-b[3]*k/2,b[2]*k,b[3]*k);g.restore();
+    poly(flat,true);
   });
   g.textAlign='center';
   game.M.LM.forEach(([n,x,z])=>{
@@ -71,9 +76,9 @@ function buildBig(){
   MAP.PLACES.forEach(p=>{const[a,b]=bigP(p.x,p.z);g.fillStyle='#1a6a2a';g.beginPath();g.arc(a,b,4,0,7);g.fill();halo(g,p.n+(p.approx?' *':''),a,b-8,'#14501e','bold 14px Segoe UI,Arial')});
   (game.meadow||[]).forEach(m=>{const[a,b]=bigP(m.x,m.z);g.fillStyle=m.k==='tree'?'#246b2e':m.k==='hay'?'#c9842a':m.k==='wheat'?'#d7b23a':'#5ea044';g.beginPath();g.arc(a,b,m.k==='tree'?7:4.5,0,7);g.fill()});
   // legenda
-  g.textAlign='left';  g.fillStyle='#fffd';g.fillRect(8,8,300,140);g.strokeStyle='#789';g.lineWidth=1;g.strokeRect(8,8,300,140);
+  g.textAlign='left';  g.fillStyle='#fffd';g.fillRect(8,8,300,164);g.strokeStyle='#789';g.lineWidth=1;g.strokeRect(8,8,300,164);
   g.font='bold 13px Segoe UI,Arial';g.fillStyle='#123';
-  [['#ffe94a','Domov'],['#ff4fb8','Robo-garáže sousedů (zloději, psi!)'],['#ffb000','Pastvina s býkem a duhovými Ozoboty'],['#ffffff','Ty (šipka = kam koukáš)'],['#22d0c0','Pasti / cíl události či mise'],['#e23b2b','Červený okraj = dál už to nejde']].forEach(([c2,t],i)=>{g.fillStyle=c2;g.strokeStyle='#000';g.lineWidth=1.5;g.beginPath();g.arc(22,24+i*21,6,0,7);g.fill();g.stroke();g.fillStyle='#123';g.fillText(t,36,29+i*21)});
+  [['#ffe94a','Domov'],['#ff4fb8','Robo-garáže sousedů (zloději, psi!)'],['#ffb000','Pastvina s býkem a duhovými Ozoboty'],['#ffffff','Ty (šipka = kam koukáš)'],['#22d0c0','Pasti / cíl události či mise'],['#e23b2b','Červený okraj = dál už to nejde'],['#c45cff','Ostatní hráči (⏳ odešel)']].forEach(([c2,t],i)=>{g.fillStyle=c2;g.strokeStyle='#000';g.lineWidth=1.5;g.beginPath();g.arc(22,24+i*21,6,0,7);g.fill();g.stroke();g.fillStyle='#123';g.fillText(t,36,29+i*21)});
   g.strokeStyle='#e23b2b';g.lineWidth=8;g.strokeRect(4,4,w-8,h-8);
   bigBase=c;
 }
@@ -86,6 +91,13 @@ function drawBig(){
   if(!mayorIt)mayorIt=game.interact.find(i=>/starost/i.test(i.text()));
   if(mayorIt){const[a,b]=bigP(mayorIt.x,mayorIt.z);halo(g,'🎩 Starosta',a,b-8,'#5a3a00','bold 13px Segoe UI,Arial')}
   game.traps.forEach(t=>dot(t.x,t.z,'#22ffee',6));
+  g.save();g.textAlign='center';
+  (game.peers||[]).forEach(p=>{
+    dot(p.x,p.z,p.color,7);
+    const [a,b]=bigP(p.x,p.z);
+    halo(g,(p.away?'⏳ ':'')+p.name,a,b-12,'#3a2060','bold 13px Segoe UI,Arial');
+  });
+  g.restore();
   // radar – Ozoboti do 60 jednotek
   game.robots.forEach(r=>{if(r.alive&&Math.hypot(r.x-game.pv.x,r.z-game.pv.z)<60)dot(r.x,r.z,r.quest?'#ff4fb8':'#'+r.lm.color.getHexString(),r.quest?7:5)});
   const[pa,pb]=bigP(game.pv.x,game.pv.z);
@@ -214,6 +226,7 @@ function controlsModal(){
       +'<tr><td><kbd>Esc</kbd></td><td>Zavřít okno nebo mapu</td></tr>'
       +'<tr><td><kbd>+</kbd><kbd>−</kbd> nebo kolečko</td><td>Přiblížit a oddálit kameru</td></tr>'
       +'<tr><td>Myš</td><td>Táhni po obrazovce a otáčej kameru</td></tr>'
+      +'<tr><td>Telefon</td><td>Vlevo páčka: chůze. Prstem po hřišti: otáčení. Tlačítka vpravo dole: skok, běh a akce.</td></tr>'
       +'</tbody></table>';
   },false);
 }

@@ -234,15 +234,16 @@ function ribbon(lines,halfW,yoff,material,receive=true){
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(P),3));geo.setIndex(I);geo.computeVertexNormals();
   const m=new THREE.Mesh(geo,material);m.receiveShadow=receive;game.scene.add(m);return m;
 }
+const ROAD_HALF=[2.6,1.55];
 const roadSegs=[];
 {
   const major=[],minor=[];
   game.M.R.forEach(([k,pts])=>{
     (k===0?major:minor).push(pts);
-    for(let i=0;i<pts.length-2;i+=2)roadSegs.push([pts[i],pts[i+1],pts[i+2],pts[i+3],k===0?1.8:0.9]);
+    for(let i=0;i<pts.length-2;i+=2)roadSegs.push([pts[i],pts[i+1],pts[i+2],pts[i+3],k===0?ROAD_HALF[0]:ROAD_HALF[1]]);
   });
   const pm=(c)=>new THREE.MeshLambertMaterial({color:c,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,side:THREE.DoubleSide});
-  ribbon(major,1.8,0.07,pm(0x8d8a84));ribbon(minor,0.9,0.06,pm(0xb0915e));
+  ribbon(major,ROAD_HALF[0],0.07,pm(0x8d8a84));ribbon(minor,ROAD_HALF[1],0.06,pm(0xb0915e));
 }
 function nearRoad(x,z,pad){
   for(const [ax,az,bx,bz,hw] of roadSegs){
@@ -263,41 +264,95 @@ game.ponds.forEach(p=>{
 });
 ribbon(game.M.ST,0.65,0.1,new THREE.MeshLambertMaterial({color:0x3aa0ff,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3,side:THREE.DoubleSide}));
 
-// Budovy (na svahu se základem, okna, dveře, komíny)
+// Budovy podle skutečného obrysu (terasa a přístavek zůstávají součástí domu)
 const winMat=new THREE.MeshBasicMaterial({color:0x86c2ee});
 const bgrid=new Map();
+function buildingRings(b){
+  if(b.length<=6){
+    const [x,z,w,d,a]=b,c=Math.cos(a),s=Math.sin(a),loc=(lx,lz)=>[x+lx*c-lz*s,z+lx*s+lz*c];
+    return {outer:[[w/2,d/2],[-w/2,d/2],[-w/2,-d/2],[w/2,-d/2]].map(([lx,lz])=>loc(lx,lz)),holes:[]};
+  }
+  let i=6,n=b[i++],outer=[];
+  for(let k=0;k<n;k++)outer.push([b[i++],b[i++]]);
+  const nh=b[i++]||0,holes=[];
+  for(let h=0;h<nh;h++){const m=b[i++],ring=[];for(let k=0;k<m;k++)ring.push([b[i++],b[i++]]);holes.push(ring)}
+  return {outer,holes};
+}
 {
-  const walls=[],roofs=[],wins=[],doors=[],chims=[];
+  const pos=[],col=[],idx=[],roofs=[],wins=[],doors=[],chims=[];
   const wallPal=[0xf4e3b0,0xf7c6c6,0xc9e4f2,0xf0ede6,0xf2d7a0,0xe3f0c8,0xffe0b8];
   const roofPal=[0xb5432a,0x8a3a1a,0x6b3a2a,0xa8452e,0x7a4a3a,0x9a3a2a];
+  const rgb=c=>[(c>>16&255)/255,(c>>8&255)/255,(c&255)/255];
+  const tri=(ax,ay,az,bx,by,bz,cx,cy,cz,c)=>{
+    const k=pos.length/3;pos.push(ax,ay,az,bx,by,bz,cx,cy,cz);
+    col.push(c[0],c[1],c[2],c[0],c[1],c[2],c[0],c[1],c[2]);idx.push(k,k+1,k+2);
+  };
+  const band=(ring,y0,y1,c)=>{
+    for(let i=0;i<ring.length;i++){
+      const a=ring[i],b=ring[(i+1)%ring.length];
+      tri(a[0],y0,a[1],a[0],y1,a[1],b[0],y1,b[1],c);
+      tri(a[0],y0,a[1],b[0],y1,b[1],b[0],y0,b[1],c);
+    }
+  };
   game.M.B.forEach((b,i)=>{
-    const [x,z,w,d,a,ty]=b,h0=(i*7%10)/10,c=Math.cos(a),s=Math.sin(a);
+    const [x,z,, , ,ty]=b,h0=(i*7%10)/10,{outer,holes}=buildingRings(b);
+    if(outer.length<3)return;
     let h,wc,rc,rh;
     if(ty===2){h=5;wc=0xf0e0c0;rc=0xd93a2a;rh=2.6}
     else if(ty===3){h=6;wc=0xfff3b0;rc=0x3a6fd9;rh=2.6}
     else if(ty===1){h=4.2+h0*2.2;wc=0xc9b08a;rc=0x777777;rh=1.6}
     else if(ty===4){h=2.4;wc=0xdddddd;rc=0x666666;rh=0.9}
     else{h=3.6+h0*1.6;wc=wallPal[i%wallPal.length];rc=roofPal[(i*3)%roofPal.length];rh=2.3+h0}
-    const ry=-a,loc=(lx,lz)=>[x+lx*c-lz*s,z+lx*s+lz*c];
-    const gs=[[0,0],[w/2,d/2],[-w/2,d/2],[w/2,-d/2],[-w/2,-d/2]].map(([lx,lz])=>{const [px,pz]=loc(lx,lz);return game.gy(px,pz)});
-    const gmin=Math.min(...gs),gmax=Math.max(...gs);
-    walls.push({x,y:gmin-0.5,z,ry,sx:w,sy:(gmax-gmin)+0.5+h,sz:d,color:wc});
-    roofs.push({x,y:gmax+h,z,ry,sx:w*1.12,sy:rh,sz:d*1.12,color:rc});
-    game.addBoxObs(x,z,w,d,a);
+    const gs=outer.map(([px,pz])=>game.gy(px,pz));
+    const gmin=Math.min(...gs),gmax=Math.max(...gs),y0=gmin-0.5,y1=gmax+h;
+    const wr=rgb(wc),rr=rgb(rc);
+    band(outer,y0,y1,wr);for(const hole of holes)band(hole,y0,y1,wr);
+    game.addPolyObs(outer,holes);
     const key=((x/20)|0)+','+((z/20)|0);if(!bgrid.has(key))bgrid.set(key,[]);bgrid.get(key).push(i);
-    if(ty===4)return;
-    const n=Math.max(1,Math.min(5,Math.floor(w/3.2)));
-    for(const side of[-1,1])for(let k=0;k<n;k++){
-      const lx=(k-(n-1)/2)*(w/n);
-      if(side===-1&&Math.abs(lx)<1.2)continue;
-      const [gx,gz]=loc(lx,side*(d/2+0.05));
-      wins.push({x:gx,y:game.gy(gx,gz)+h*0.35+0.3,z:gz,ry,sx:ty===1?0.6:1.0,sy:h*0.3,sz:0.22});
+    const simple=outer.length<=4&&!holes.length;
+    if(simple){
+      let best=0,a0=outer[0],b0=outer[1];
+      for(let k=0;k<outer.length;k++){const a=outer[k],c=outer[(k+1)%outer.length],len=Math.hypot(c[0]-a[0],c[1]-a[1]);if(len>best){best=len;a0=a;b0=c}}
+      const ang=Math.atan2(b0[1]-a0[1],b0[0]-a0[0]),c=Math.cos(ang),s=Math.sin(ang);
+      let minu=1e9,maxu=-1e9,minv=1e9,maxv=-1e9;
+      for(const p of outer){const u=p[0]*c+p[1]*s,v=-p[0]*s+p[1]*c;if(u<minu)minu=u;if(u>maxu)maxu=u;if(v<minv)minv=v;if(v>maxv)maxv=v}
+      const uc=(minu+maxu)/2,vc=(minv+maxv)/2;
+      roofs.push({x:uc*c-vc*s,y:y1,z:uc*s+vc*c,ry:-ang,sx:(maxu-minu)*1.12,sy:rh,sz:(maxv-minv)*1.12,color:rc});
+    }else{
+      const yR=y1+0.42;
+      band(outer,y1,yR,rr);for(const hole of holes)band(hole,y1,yR,rr);
+      const contour=outer.map(([px,pz])=>new THREE.Vector2(px,pz));
+      const holeVs=holes.map(h=>h.map(([px,pz])=>new THREE.Vector2(px,pz)));
+      let faces=[];try{faces=THREE.ShapeUtils.triangulateShape(contour,holeVs)||[]}catch(e){faces=[]}
+      const verts=contour.concat(...holeVs);
+      for(const f of faces){const A=verts[f[0]],B=verts[f[1]],C=verts[f[2]];tri(A.x,yR,A.y,C.x,yR,C.y,B.x,yR,B.y,rr)}
     }
-    const [dx,dz]=loc(0,-(d/2+0.06));
-    doors.push(ty===1?{x:dx,y:game.gy(dx,dz),z:dz,ry,sx:2.6,sy:2.7,sz:0.25,color:0x8a8a90}:{x:dx,y:game.gy(dx,dz),z:dz,ry,sx:1.1,sy:2.1,sz:0.25,color:0x6b3f1f});
-    if(ty===0||ty===2){const [cx,cz]=loc(w*0.25,0);chims.push({x:cx,y:gmax+h+rh*0.35,z:cz,ry,sx:0.7,sy:rh*0.75+0.5,sz:0.7,color:0x8a5a4a})}
+    if(ty===4)return;
+    let door=0,doorLen=0;
+    for(let k=0;k<outer.length;k++){const a=outer[k],c=outer[(k+1)%outer.length],len=Math.hypot(c[0]-a[0],c[1]-a[1]);if(len>doorLen){doorLen=len;door=k}}
+    outer.forEach((a,k)=>{
+      const c=outer[(k+1)%outer.length],dx=c[0]-a[0],dz=c[1]-a[1],len=Math.hypot(dx,dz);
+      if(len<2.6)return;
+      const il=len||1,nx=dz/il,nz=-dx/il,n=Math.max(1,Math.min(4,Math.floor(len/3.2))),ry=Math.atan2(nx,nz);
+      for(let t=0;t<n;t++){
+        const u=(t+0.5)/n;if(k===door&&Math.abs(u-0.5)<0.22)continue;
+        const gx=a[0]+dx*u+nx*0.08,gz=a[1]+dz*u+nz*0.08;
+        wins.push({x:gx,y:game.gy(gx,gz)+h*0.35+0.3,z:gz,ry,sx:ty===1?0.6:Math.min(1.15,len/n*0.55),sy:h*0.3,sz:0.22});
+      }
+    });
+    {
+      const a=outer[door],c=outer[(door+1)%outer.length],dx=c[0]-a[0],dz=c[1]-a[1],il=Math.hypot(dx,dz)||1,nx=dz/il,nz=-dx/il;
+      const gx=a[0]+dx*0.5+nx*0.08,gz=a[1]+dz*0.5+nz*0.08,ry=Math.atan2(nx,nz);
+      doors.push(ty===1?{x:gx,y:game.gy(gx,gz),z:gz,ry,sx:2.6,sy:2.7,sz:0.25,color:0x8a8a90}:{x:gx,y:game.gy(gx,gz),z:gz,ry,sx:1.1,sy:2.1,sz:0.25,color:0x6b3f1f});
+    }
+    if(ty===0||ty===2)chims.push({x,y:y1+rh*0.35,z,ry:0,sx:0.7,sy:rh*0.75+0.5,sz:0.7,color:0x8a5a4a});
   });
-  instanced(unitBox,white,walls,true,true);
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  geo.setIndex(idx);geo.computeVertexNormals();
+  const shell=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
+  shell.castShadow=true;shell.receiveShadow=true;game.scene.add(shell);
   instanced(unitRoof,white,roofs,true,true);
   instanced(unitBox,winMat,wins);
   instanced(unitBox,white,doors);
@@ -312,6 +367,8 @@ game.M.LM.forEach(([name,x,z])=>{
 
 
   bind(game, "bgrid", () => bgrid);
+  bind(game, "buildingRings", () => buildingRings);
+  bind(game, "roadHalf", () => ROAD_HALF);
   bind(game, "instanced", () => instanced);
   bind(game, "nearRoad", () => nearRoad);
   bind(game, "unitBox", () => unitBox);

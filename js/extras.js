@@ -123,7 +123,16 @@ export function initExtras(){
   css.textContent=`
   #xbar{left:50%;top:66px;transform:translateX(-50%);font-size:22px;text-align:center;background:#7a2aa0cc;padding:5px 18px;border-radius:12px;display:none;white-space:nowrap}
   #roundbox{left:50%;top:38px;transform:translateX(-50%);font-size:20px;text-align:center;background:#0a6bd8cc;padding:4px 16px;border-radius:12px;display:none;white-space:nowrap}
-  #xboard{right:12px;top:272px;font-size:14px;line-height:1.3;background:#0a1a3acc;padding:6px 10px;border-radius:10px;min-width:150px;display:none}
+  #xboard{right:12px;top:276px;width:210px;font-size:14px;line-height:1.25;font-weight:700;background:#0a1a3acc;padding:8px 10px 8px;border-radius:12px;display:none;pointer-events:auto;text-shadow:0 1px 2px #000a}
+  #xboard .xh{color:#ffe94a;font-size:14px;margin:0 0 4px}
+  #xboard .xu{display:block;color:#c9d6ea;font-size:11px;font-weight:700}
+  #xboard .xe{opacity:.8;font-size:13px}
+  #xboard .xr{display:flex;gap:6px;align-items:baseline;padding:2px 4px;border-radius:6px}
+  #xboard .xr.me{background:#ffe94a33}
+  #xboard .xk{width:1.6em;flex:0 0 auto;opacity:.85}
+  #xboard .xn{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #xboard .xs{flex:0 0 auto;font-variant-numeric:tabular-nums}
+  #xboard button{display:block;width:100%;margin-top:6px;padding:4px 8px;font-size:13px;border-radius:8px}
   #bossbar{left:50%;top:100px;transform:translateX(-50%);width:320px;display:none;text-align:center;font-size:16px}
   #bossbar div.b{height:16px;background:#0008;border:2px solid #fff;border-radius:10px;overflow:hidden;margin-top:2px}
   #bossbar i{display:block;height:100%;background:linear-gradient(90deg,#ff3a3a,#ffb347)}
@@ -374,7 +383,7 @@ export function initExtras(){
     if(!Mu.ctx)return;
     Mu.rainG.gain.setTargetAtTime(game.W.rain*0.07,Mu.ctx.currentTime,0.5);
     const v=game.veh();
-    if(game.started&&v&&(game.keys.KeyW||game.keys.KeyS||game.keys.KeyA||game.keys.KeyD)&&!game.modalOpen){
+    if(game.started&&v&&(game.keys.KeyW||game.keys.KeyS||game.keys.KeyA||game.keys.KeyD||(game.stick&&game.stick.on))&&!game.modalOpen){
       if(v.siren){Mu.sirenT-=dt;if(Mu.sirenT<=0){Mu.sirenT=0.55;const t=Mu.ctx.currentTime;tone(t,Math.random()<2?(Math.floor(game.time*1.8)%2?660:880):660,0.5,'sawtooth',0.03,0.03)}}
       if(v.clop){Mu.clopT-=dt;if(Mu.clopT<=0){Mu.clopT=0.22;const t=Mu.ctx.currentTime;tone(t,180,0.06,'sine',0.09,0.002);tone(t+0.09,140,0.06,'sine',0.07,0.002)}}
     }
@@ -450,6 +459,28 @@ export function initExtras(){
   bind(game, "buffs", () => buffs);
   bind(game, "dip", () => dip);
   bind(game, "elBoard", () => elBoard);
+  let sideSig='';
+  game.sideListOpen=false;
+  const sideEsc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  function paintSideList(title, unit, rows){
+    const open=!!game.sideListOpen;
+    const extra=rows.length>10;
+    const shown=(open||!extra)?rows:rows.slice(0,10);
+    const sig=title+'|'+unit+'|'+(open?1:0)+'|'+rows.length+'|'+shown.map(r=>(r.me?1:0)+'|'+r.name+'|'+r.score).join(';');
+    elBoard.style.display='block';
+    if(sig===sideSig)return;
+    sideSig=sig;
+    let html='<div class="xh">'+sideEsc(title)+'<span class="xu">'+sideEsc(unit)+'</span></div>';
+    if(!shown.length)html+='<div class="xe">Zatím nikdo</div>';
+    shown.forEach((r,i)=>{
+      html+='<div class="xr'+(r.me?' me':'')+'"><span class="xk">'+(i+1)+'.</span><span class="xn">'+sideEsc(r.name)+'</span><span class="xs">'+r.score+'</span></div>';
+    });
+    if(extra)html+='<button type="button" id="xmore">'+(open?'Zmenšit':'Zvětšit ('+rows.length+')')+'</button>';
+    elBoard.innerHTML=html;
+    const btn=elBoard.querySelector('#xmore');
+    if(btn)btn.onclick=ev=>{ev.stopPropagation();game.sideListOpen=!game.sideListOpen;sideSig='';};
+  }
+  bind(game, "paintSideList", () => paintSideList);
   bind(game, "elCount", () => elCount);
   bind(game, "elRound", () => elRound);
   bind(game, "endEvent", () => endEvent);

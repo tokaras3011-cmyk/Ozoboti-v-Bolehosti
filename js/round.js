@@ -82,6 +82,14 @@ const API_BASE=new URL('.', location.href).href;
   }
 
 
+  function paintRoundList(){
+    if(!game.paintSideList||!game.S)return;
+    const me=game.S.name.toLowerCase();
+    const rows=Net.board.map(p=>({name:p.name,score:p.score|0,me:p.name.toLowerCase()===me}));
+    if(!rows.some(r=>r.me))rows.push({name:game.S.name,score:Math.floor(Round.score),me:true});
+    rows.sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'cs'));
+    game.paintSideList('Pořadí', 'body', rows);
+  }
 function tickRound(dt){
 if(Net.ok&&game.started){
       const serverNow=srvNow();
@@ -92,11 +100,12 @@ if(Net.ok&&game.started){
         else if(Net.phase==='countdown'){
           const n=Math.ceil((Net.start-serverNow)/1000);game.elCount.style.display='block';game.elCount.textContent=n>0?n:'';game.pv.x=game.H.x;game.pv.z=game.H.z;
           game.elRound.style.display='block';game.elRound.textContent='🏁 Kolo č. '+Net.id+' – start za '+n+' s';
+          paintRoundList();
         }else if(Net.phase==='running'){
           game.elCount.style.display='none';
           const rem=(roundEnd()-serverNow)/1000,rank=Net.board.findIndex(p=>p.name.toLowerCase()===game.S.name.toLowerCase());
           game.elRound.style.display='block';game.elRound.textContent='🏁 '+mmss(rem)+'   ⭐ '+Math.floor(Round.score)+' b.'+(rank>=0?'   ('+(rank+1)+'. místo)':'');
-          game.elBoard.style.display='block';game.elBoard.innerHTML='<b>🏆 Pořadí</b><br>'+Net.board.slice(0,6).map((p,i)=>(i+1)+'. '+p.name.replace(/</g,'&lt;')+' – '+p.score).join('<br>');
+          paintRoundList();
           Round.sendT-=dt;if(Round.sendT<=0){Round.sendT=2;sendScore()}
           const el=(serverNow-Net.start)/1000;
           Round.sched.forEach(e=>{if(!e.done&&el>=e.at){e.done=true;game.startEvent(e.t,e.dur)}});

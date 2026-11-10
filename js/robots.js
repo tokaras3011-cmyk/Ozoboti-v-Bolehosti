@@ -37,7 +37,7 @@ const robots=[],groups=[];
 function randomFree(){
   for(let t=0;t<60;t++){
     let x,z;
-    if(Math.random()<0.75){const b=game.M.B[(Math.random()*game.M.B.length)|0],a=game.rnd(0,6.28),r=Math.max(b[2],b[3])/2+game.rnd(2.5,10);x=b[0]+Math.cos(a)*r;z=b[1]+Math.sin(a)*r}
+    if(Math.random()<0.75){const b=game.M.B[(Math.random()*game.M.B.length)|0],a=game.rnd(0,6.28),r=Math.max(b[2],b[3])/2*1.4+game.rnd(2.5,10);x=b[0]+Math.cos(a)*r;z=b[1]+Math.sin(a)*r}
     else{const [a,b,c,d]=game.M.region;x=game.rnd(a+6,b-6);z=game.rnd(c+6,d-6)}
     if(x<game.RX0+3||x>game.RX1-3||z<game.RZ0+3||z>game.RZ1-3)continue;
     if(!game.freeAt(x,z,1.5))continue;
@@ -139,7 +139,7 @@ function nearestHide(r,px,pz){
     const l=game.bgrid.get((cx+i)+','+(cz+j));if(!l)continue;
     for(const bi of l){
       const b=game.M.B[bi];let vx=b[0]-px,vz=b[1]-pz;const n=Math.hypot(vx,vz)||1;vx/=n;vz/=n;
-      const off=Math.max(b[2],b[3])/2+2.0;const hx=b[0]+vx*off,hz=b[1]+vz*off;
+      const off=Math.max(b[2],b[3])/2*1.4+2.0;const hx=b[0]+vx*off,hz=b[1]+vz*off;
       if(!game.freeAt(hx,hz,0.5))continue;
       const d=Math.hypot(hx-r.x,hz-r.z);if(d<bd){bd=d;best={x:hx,z:hz}}
     }
