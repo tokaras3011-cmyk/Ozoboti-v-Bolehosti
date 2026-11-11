@@ -16,7 +16,7 @@ const GARAGE_NAMES=['Garáž pana Zelenky','Garáž tety Kyselé','Garáž strý
 const PLACE_FACTS={
   hospoda:'Obecní hostinec (čp. 30) má i společenskou místnost na oslavy a školení. Zkus bolehošťský závitek – místní specialitu!',
   obchod:'V Bolehošti je obchod, pošta, knihovna, základní škola i školka – nemusí se dojíždět do města.',
-  hriste:'Na hřišti se scházejí sportovci z TJ Sokol Bolehošť.',
+  hriste:'Na hřišti TJ Sokol Bolehošť je fotbalové hřiště. Sportovci se tu scházejí.',
   vez:'Zvonička připomíná, že obec je stará – první písemná zmínka o Bolehošti je z roku 1394.',
   pomnik:'Pomníky připomínají lidi a události z dějin obce. V roce 2024 slavila Bolehošť 630 let od založení!',
   kriz:'Boží muka a kříže u cest dřív označovaly cesty a pole. Bolehošť je ve starých listinách od roku 1394.',
@@ -159,11 +159,12 @@ export function initExtras(){
   game.VEH.push({id:'povoz',n:'Vozatajský povoz',icon:'🐴',price:900,mult:1.5,jump:false,rad:1.3,catchAdd:0.8,capAdd:5,sprint:0,seat:[-0.1,-0.4],legs:-1.4,arms:-0.6,clop:true,desc:'Dva koně jako na závodech SK Sokol Lipiny. +5 míst.'});
   game.VEH.push({id:'tatra',n:'Hasičská Tatra 138',icon:'🚒',price:2500,mult:1.35,jump:false,rad:1.4,catchAdd:1.6,capAdd:6,sprint:0,seat:[0.7,1.9],legs:-1.5,arms:-0.9,dogsFear:true,siren:true,desc:'Jako ta od bolehošťských hasičů! Houká a psi se bojí. +6 míst.'});
   game.BADGES.find(b=>b.id==='rider').d='Vyzkoušej všechna vozidla';
-  game.BADGES.push({id:'boss',n:'Hrdina obce',d:'Poraz Mega-Ozobota starosty',t:()=>(game.S.stats.boss||0)>=1});
-  game.BADGES.push({id:'znalec',n:'Znalec Bolehoště',d:'Navštiv 8 míst v obci',t:()=>Object.keys(game.S.visited||{}).length>=8});
-  game.BADGES.push({id:'zav',n:'Závitkový mistr',d:'Dej si 3× bolehošťský závitek',t:()=>(game.S.stats.zav||0)>=3});
-  game.BADGES.push({id:'fest',n:'Na slavnosti',d:'Ochutnej guláš na Gulášové slavnosti',t:()=>(game.S.stats.gulas||0)>=1});
-  game.BADGES.push({id:'hejno',n:'Hejno na návsi',d:'Chyť 10 Ozobotů z hejna',t:()=>(game.S.stats.flock||0)>=10});
+  game.BADGES.push({id:'fest',n:'Na slavnosti',d:'Ochutnej guláš na Gulášové slavnosti',tier:'mid',t:()=>(game.S.stats.gulas||0)>=1});
+  game.BADGES.push({id:'zav',n:'Závitkový mistr',d:'Dej si 3× bolehošťský závitek',tier:'mid',t:()=>(game.S.stats.zav||0)>=3});
+  game.BADGES.push({id:'znalec',n:'Znalec Bolehoště',d:'Navštiv 8 míst v obci',tier:'rare',t:()=>Object.keys(game.S.visited||{}).length>=8});
+  game.BADGES.push({id:'hejno',n:'Hejno na návsi',d:'Chyť 10 Ozobotů z hejna',tier:'rare',t:()=>(game.S.stats.flock||0)>=10});
+  game.BADGES.push({id:'boss',n:'Hrdina obce',d:'Poraz Mega-Ozobota starosty',tier:'ultra',t:()=>(game.S.stats.boss||0)>=1});
+  game.BADGES.push({id:'boss10',n:'Neporazitelný',d:'Poraz Mega-Ozobota na úrovni 10',tier:'legend',t:()=>(game.S.stats.bossBest||0)>=10});
 
   /* ---------- Místní prvky ---------- */
   const PL={};MAP.PLACES.forEach(p=>PL[p.id]=p);
@@ -183,9 +184,63 @@ export function initExtras(){
     const bell=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.6,0.8,10),game.mat(0xd9a520));bell.position.set(p.x,game.gy(p.x,p.z)+5.9,p.z);game.scene.add(bell);
     game.addBoxObs(p.x,p.z,2.2,2.2);lab('Zvonička'+(p.approx?' *':''),'#fff',0.9,p.x,12,p.z);
   }
-  // hřiště
-  {const p=PL.hriste;for(const s of[-11,11]){game.shadowOn(game.box(0.25,2.2,0.25,0xffffff,p.x+s,0,p.z-1.8));game.shadowOn(game.box(0.25,2.2,0.25,0xffffff,p.x+s,0,p.z+1.8));game.shadowOn(game.box(0.25,0.25,3.85,0xffffff,p.x+s,2.2,p.z))}
-   lab('Hřiště TJ Sokol','#d8ffd8',0.9,p.x,7,p.z)}
+  // fotbalová hřiště (Sokol, Lhota, Lipiny) a u Lhoty a Lipin stánky
+  function mark(x1,z1,x2,z2){
+    const len=Math.hypot(x2-x1,z2-z1),n=Math.max(1,Math.ceil(len/1.35)),horiz=Math.abs(x2-x1)>=Math.abs(z2-z1);
+    for(let i=0;i<n;i++){
+      const t=(i+0.5)/n,x=x1+(x2-x1)*t,z=z1+(z2-z1)*t,seg=len/n+0.04;
+      game.box(horiz?seg:0.22,0.05,horiz?0.22:seg,0xffffff,x,0.07,z);
+    }
+  }
+  function goal(x,z,dir){
+    const hw=1.55,back=1.15*dir;
+    [[0,-hw],[0,hw],[back,-hw],[back,hw]].forEach(([dx,dz])=>game.shadowOn(game.box(0.16,1.85,0.16,0xffffff,x+dx,0,z+dz)));
+    game.shadowOn(game.box(0.16,0.14,hw*2+0.16,0xffffff,x,1.85,z));
+    game.shadowOn(game.box(0.16,0.14,hw*2+0.16,0xffffff,x+back,1.85,z));
+    game.shadowOn(game.box(Math.abs(back),0.1,0.1,0xffffff,x+back/2,1.85,z-hw));
+    game.shadowOn(game.box(Math.abs(back),0.1,0.1,0xffffff,x+back/2,1.85,z+hw));
+    for(let i=-2;i<=2;i++)game.box(0.05,1.15,0.05,0xe7eef8,x+back*0.55,0.25,z+i*hw/2.5);
+    [[0,-hw],[0,hw]].forEach(([dx,dz])=>game.addCircObs(x+dx,z+dz,0.34));
+  }
+  function footballPitch(p){
+    const {x:cx,z:cz,w,d}=p,nx=Math.max(8,Math.round(w/2)),nz=Math.max(6,Math.round(d/2));
+    const pos=[],col=[],idx=[],c1=[0.16,0.58,0.22],c2=[0.26,0.74,0.28];
+    for(let j=0;j<=nz;j++)for(let i=0;i<=nx;i++){
+      const x=cx-w/2+w*i/nx,z=cz-d/2+d*j/nz,stripe=((i/2)|0)%2,c=stripe?c2:c1;
+      pos.push(x,game.gy(x,z)+0.05,z);col.push(c[0],c[1],c[2]);
+    }
+    for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){
+      const a=j*(nx+1)+i,b=a+1,c=a+(nx+1),e=c+1;idx.push(a,c,b,b,c,e);
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+    geo.setIndex(idx);geo.computeVertexNormals();
+    const mesh=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+    mesh.receiveShadow=true;game.scene.add(mesh);
+    const x0=cx-w/2,x1=cx+w/2,z0=cz-d/2,z1=cz+d/2;
+    mark(x0,z0,x1,z0);mark(x1,z0,x1,z1);mark(x1,z1,x0,z1);mark(x0,z1,x0,z0);mark(cx,z0,cx,z1);
+    const R=Math.min(3.3,d*0.2),steps=16;
+    for(let i=0;i<steps;i++){const a=i/steps*6.2832,b=(i+1)/steps*6.2832;mark(cx+Math.cos(a)*R,cz+Math.sin(a)*R,cx+Math.cos(b)*R,cz+Math.sin(b)*R)}
+    game.box(0.35,0.08,0.35,0xffffff,cx,0.08,cz);
+    const pw=Math.min(d*0.5,9),pd=Math.min(w*0.16,4.5);
+    [[x0,-1],[x1,1]].forEach(([gx,out])=>{
+      const ix=gx-pd*out;
+      mark(gx,cz-pw/2,ix,cz-pw/2);mark(ix,cz-pw/2,ix,cz+pw/2);mark(ix,cz+pw/2,gx,cz+pw/2);
+      goal(gx+0.2*out,cz,out);
+    });
+    const ball=new THREE.Mesh(new THREE.SphereGeometry(0.38,12,8),game.mat(0xffffff));
+    ball.position.set(cx+1.2,game.gy(cx,cz)+0.42,cz+0.4);ball.castShadow=true;game.scene.add(ball);
+    const side=p.shops==='s'?-1:(p.shops?1:0);
+    lab(p.name,'#d8ffd8',p.shops?0.85:0.9,cx,8,cz-(side||1)*(d/2+1.5));
+    if(!side)return;
+    const sz=cz+side*(d/2+4.2),sell={x:cx-4.2,z:sz},shop={x:cx+4.2,z:sz};
+    game.stall(sell.x,sell.z,0xf5c400,'Výkup Ozobotů');
+    game.stall(shop.x,shop.z,0x2a7be4,'Obchod');
+    game.interact.push({x:sell.x,z:sell.z-side*2.6,r:4.4,text:()=>game.carry.length?'E – Prodat Ozoboty ('+game.carry.length+')':'E – Výkup (nemáš žádné Ozoboty)',act:()=>game.sellAt(sell.x,sell.z)});
+    game.interact.push({x:shop.x,z:shop.z-side*2.6,r:4.4,text:()=>'E – Obchod',act:game.shopModal});
+  }
+  (game.pitches||[]).forEach(p=>footballPitch(p));
   // obchod, pomník, kříž
   lab('Obchod','#fff',0.8,PL.obchod.x,8,PL.obchod.z);
   {const p=PL.pomnik;game.shadowOn(game.box(1.6,0.6,1.6,0x888888,p.x,0,p.z));game.shadowOn(game.box(0.9,3.4,0.9,0xaaaaaa,p.x,0.6,p.z));game.addCircObs(p.x,p.z,1.1);lab('Pomník','#ddd',0.7,p.x,6,p.z)}
@@ -219,13 +274,23 @@ export function initExtras(){
   const mayor=game.buildAvatar(mayorCh,null);mayor.g.scale.setScalar(0.75);mayor.g.position.set(mayorPos[0],game.gy(mayorPos[0],mayorPos[1]),mayorPos[1]);game.scene.add(mayor.g);
   game.addCircObs(mayorPos[0],mayorPos[1],0.8);lab('Starosta Jakub Šimerda','#ffe94a',0.6,mayorPos[0],5.0,mayorPos[1]);
   let bossCd=0;
+  function bossLevel(){
+    const n=game.S&&game.S.stats&&+game.S.stats.bossLvl;
+    return Math.max(1,Math.min(10,n||1));
+  }
+  function bossTune(lvl){
+    const k=lvl-1;
+    return {hp:4+lvl,flee:7.2+k*0.5,blink:Math.max(1.35,3.25-k*0.2),inv:2.2+k*0.15,near:16+k*0.8,jump0:14+k*0.5,jump1:24+k};
+  }
   game.interact.push({x:mayorPos[0],z:mayorPos[1],r:5,text:()=>'E – Promluvit se starostou',act:mayorModal});
   function mayorModal(){
     game.openModal('🎩 Starosta Jakub Šimerda',el=>{
-      const lines=['Vítej v Bolehošti! Zelí, hasiči, rybníky – na to jsme pyšní. A teď ještě Ozoboti!','Prý se po obci toulá Mega-Ozobot. Chytíš ho? Musíš ho zasáhnout pětkrát – pokaždé přeblikne jinam.','Za chycení Mega-Ozobota dostaneš odměnu od obce a odznak Hrdina obce.'];
+      const lvl=bossLevel(),hp=bossTune(lvl).hp;
+      const lines=['Vítej v Bolehošti! Zelí, hasiči, rybníky – na to jsme pyšní. A teď ještě Ozoboti!','Mega-Ozobot má úrovně 1 až 10. Každá další má víc životů, běhá rychleji a častěji zmizí.','Za poražení Mega-Ozobota dostaneš odměnu od obce. Desátá úroveň je nejtěžší.'];
       el.innerHTML='<p>'+lines[(Date.now()/10000|0)%lines.length]+'</p>';
       const canBoss=!boss&&!EV.cur&&bossCd<=0&&!game.Round.entered;
-      game.row(el,'👑 Vyzvat Mega-Ozobota',game.Round.entered?'V kole ho starosta pustí sám v pravý čas.':(boss?'Mega-Ozobot už běhá po obci!':(bossCd>0?'Starosta ho musí nejdřív sehnat zpátky ('+Math.ceil(bossCd)+' s).':'Starosta pustí obřího Ozobota. Pozor, je rychlý!')),null,()=>{if(canBoss){startEvent('boss');game.closeModal()}},canBoss?'Do toho!':'—');
+      const desc=game.Round.entered?'V kole ho starosta pustí sám v pravý čas.':(boss?'Mega-Ozobot už běhá po obci!':(bossCd>0?'Starosta ho musí nejdřív sehnat zpátky ('+Math.ceil(bossCd)+' s).':'Úroveň '+lvl+' z 10. Má '+hp+' životů. Když ho zasáhneš, přeskočí jinam.'));
+      game.row(el,'👑 Vyzvat Mega-Ozobota (úroveň '+lvl+'/10)',desc,null,()=>{if(canBoss){startEvent('boss');game.closeModal()}},canBoss?'Do toho!':'—');
       el.lastChild.querySelector('button').disabled=!canBoss;
     },false);
   }
@@ -280,7 +345,10 @@ export function initExtras(){
         if(gulasStand.taken)return;gulasStand.taken=true;buffs.gul=45;game.stam=100;game.S.money+=50;game.S.stats.gulas=(game.S.stats.gulas||0)+1;game.sfx.sell();game.toast('🍲 Guláš! Rychlost +25 % a +⚡50','#ffd27a');game.refreshHud();game.checkBadges();
       }});
     }else if(type==='boss'){
-      spawnBoss();
+      const lvl=bossLevel();
+      EV.cur.dur=EV.cur.t=100+lvl*12;
+      EV.cur.label='👑 Mega-Ozobot – úroveň '+lvl+'!';
+      spawnBoss(lvl);
     }else if(type==='hunt'){EV.hunt=duration}
   }
   function endEvent(silent){
@@ -292,36 +360,41 @@ export function initExtras(){
     EV.cur=null;elBar.style.display='none';
   }
   /* Mega-Ozobot */
-  function spawnBoss(){
-    const o=game.makeOzo(0xffffff,5.5);game.scene.add(o.g);
-    const lb=game.label('MEGA-OZOBOT','#ffe94a',0.32);lb.position.set(0,2.0,0);o.g.add(lb);
+  function spawnBoss(lvl){
+    lvl=lvl||bossLevel();
+    const tune=bossTune(lvl);
+    const o=game.makeOzo(0xffffff,5.2+lvl*0.08);game.scene.add(o.g);
+    const lb=game.label('ÚROVEŇ '+lvl,'#ffe94a',0.34);lb.position.set(0,2.05,0);o.g.add(lb);
     let s=freeSpot(uradLM[1],uradLM[2],14,36,5)||[uradLM[1]+20,uradLM[2]];
-    boss=Object.assign(o,{x:s[0],z:s[1],hp:5,max:5,hitCd:0,heading:game.rnd(0,6.28),t:0,cd:2,ph:0});
+    boss=Object.assign(o,{x:s[0],z:s[1],hp:tune.hp,max:tune.hp,lvl,tune,hitCd:0,heading:game.rnd(0,6.28),t:0,cd:1.4,ph:0});
     o.g.position.set(s[0],game.gy(s[0],s[1]),s[1]);EV.cur.pos={x:s[0],z:s[1]};
   }
   function updateBoss(dt){
     const b=boss;if(!b)return;
-    const dx=b.x-game.pv.x,dz=b.z-game.pv.z,d=Math.hypot(dx,dz);
-    b.t-=dt;if(b.t<=0){b.heading+=game.rnd(-1.5,1.5);b.t=game.rnd(1,2.5)}
-    let hd=b.heading,sp=3;
-    if(d<20){hd=Math.atan2(dz,dx)+Math.sin(game.time*2)*0.5;sp=7.2}
+    const tune=b.tune,dx=b.x-game.pv.x,dz=b.z-game.pv.z,d=Math.hypot(dx,dz);
+    b.t-=dt;if(b.t<=0){b.heading+=game.rnd(-1.5,1.5);b.t=game.rnd(0.8,2.2)}
+    let hd=b.heading,sp=3+ (b.lvl-1)*0.12;
+    if(d<18+b.lvl*0.4){hd=Math.atan2(dz,dx)+Math.sin(game.time*(1.6+b.lvl*0.12))*0.45;sp=tune.flee}
     b.cd-=dt;
-    if(b.cd<=0&&d<16){for(let t=0;t<8;t++){const a=game.rnd(0,6.28),dd=game.rnd(14,24),x=b.x+Math.cos(a)*dd,z=b.z+Math.sin(a)*dd;if(game.freeAt(x,z,4)&&x>game.RX0+6&&x<game.RX1-6&&z>game.RZ0+6&&z<game.RZ1-6){game.burst(b.x,game.gy(b.x,b.z)+4,b.z,0xffffff,14);b.x=x;b.z=z;game.burst(x,game.gy(x,z)+4,z,0xffffff,14);game.sfx.blink();break}}b.cd=3.2}
+    if(b.cd<=0&&d<tune.near){for(let t=0;t<8;t++){const a=game.rnd(0,6.28),dd=game.rnd(tune.jump0,tune.jump1),x=b.x+Math.cos(a)*dd,z=b.z+Math.sin(a)*dd;if(game.freeAt(x,z,4)&&x>game.RX0+6&&x<game.RX1-6&&z>game.RZ0+6&&z<game.RZ1-6){game.burst(b.x,game.gy(b.x,b.z)+4,b.z,0xffffff,14);b.x=x;b.z=z;game.burst(x,game.gy(x,z)+4,z,0xffffff,14);game.sfx.blink();break}}b.cd=tune.blink}
     const q={x:b.x+Math.cos(hd)*sp*dt,z:b.z+Math.sin(hd)*sp*dt},ox=q.x,oz=q.z;game.resolve(q,2.6);if(Math.abs(q.x-ox)+Math.abs(q.z-oz)>0.001)b.t=0;
     b.x=game.clamp(q.x,game.RX0+4,game.RX1-4);b.z=game.clamp(q.z,game.RZ0+4,game.RZ1-4);
     b.g.position.set(b.x,game.gy(b.x,b.z)+Math.abs(Math.sin(game.time*6))*0.3,b.z);b.g.rotation.y=-hd+Math.PI/2;
-    game.tmp.setHSL((game.time*0.7)%1,1,0.55);b.lm.color.copy(game.tmp);b.gm.color.copy(game.tmp);b.glow.scale.setScalar(2.4+0.4*Math.sin(game.time*5));
+    game.tmp.setHSL((game.time*(0.55+b.lvl*0.05))%1,1,0.55);b.lm.color.copy(game.tmp);b.gm.color.copy(game.tmp);b.glow.scale.setScalar(2.4+0.4*Math.sin(game.time*5));
     b.hitCd-=dt;
     if(d<game.catchR()+3.6&&b.hitCd<=0&&Math.abs(game.pv.y)<3.5&&!game.locked()){
-      b.hp--;b.hitCd=2.2;b.cd=0;game.burst(b.x,game.gy(b.x,b.z)+4,b.z,0xffffff,24);game.sfx.catch();
+      b.hp--;b.hitCd=tune.inv;b.cd=0;game.burst(b.x,game.gy(b.x,b.z)+4,b.z,0xffffff,24);game.sfx.catch();
       if(b.hp<=0){
-        const rew=game.Round.entered?0:1500;game.S.money+=rew;game.S.stats.boss=(game.S.stats.boss||0)+1;game.onScore(600);
-        game.burst(b.x,game.gy(b.x,b.z)+5,b.z,0xffffff,50);game.sfx.badge();game.toast('🎉 Mega-Ozobot poražen! '+(rew?'+⚡'+rew+' od obce':'+600 bodů'),'#ffe94a');
-        game.scene.remove(b.g);boss=null;elBoss.style.display='none';EV.cur=null;elBar.style.display='none';bossCd=180;game.refreshHud();game.checkBadges();return;
+        const next=Math.min(10,b.lvl+1);
+        game.S.stats.bossLvl=next;game.S.stats.bossBest=Math.max(game.S.stats.bossBest||0,b.lvl);
+        const rew=game.Round.entered?0:1300+b.lvl*200;game.S.money+=rew;game.S.stats.boss=(game.S.stats.boss||0)+1;game.onScore(400+b.lvl*80);
+        game.burst(b.x,game.gy(b.x,b.z)+5,b.z,0xffffff,50);game.sfx.badge();
+        game.toast('🎉 Úroveň '+b.lvl+' poražena! '+(b.lvl<10?'Další je úroveň '+next+'. ':'Desátá úroveň je maximum. ')+(rew?'+⚡'+rew+' od obce':'+'+(400+b.lvl*80)+' bodů'),'#ffe94a',4.2);
+        game.scene.remove(b.g);boss=null;elBoss.style.display='none';EV.cur=null;elBar.style.display='none';bossCd=180;game.refreshHud();game.checkBadges();game.save();return;
       }
-      game.toast('Zásah! Mega-Ozobotovi zbývá '+b.hp+' z '+b.max,'#ffb347');
+      game.toast('Zásah! Úroveň '+b.lvl+' – zbývá '+b.hp+' z '+b.max,'#ffb347');
     }
-    elBoss.style.display='block';elBoss.innerHTML='👑 MEGA-OZOBOT '+b.hp+'/'+b.max+'<div class="b"><i style="width:'+(b.hp/b.max*100)+'%"></i></div>';
+    elBoss.style.display='block';elBoss.innerHTML='👑 ÚROVEŇ '+b.lvl+'/10 · '+b.hp+'/'+b.max+'<div class="b"><i style="width:'+(b.hp/b.max*100)+'%"></i></div>';
   }
 
   /* ---------- Hudba a zvuky ---------- */
@@ -392,8 +465,14 @@ export function initExtras(){
 
   /* ---------- Objevování míst a zajímavosti ---------- */
   const DISC=[];
+  const shore={};game.ponds.forEach(p=>{if(p.name)shore[p.name]=p});
   MAP.PLACES.forEach(p=>DISC.push({id:p.id,name:p.n,x:p.x,z:p.z,r:p.id==='pole'?14:9,fact:PLACE_FACTS[p.id]}));
-  game.M.LM.forEach(l=>{if(PLACE_FACTS[l[0]])DISC.push({id:'lm:'+l[0],name:l[0],x:l[1],z:l[2],r:/Lhota|Lipiny/.test(l[0])?30:/zámek|Šerka|Jirsák|Březina|jezírka|Čížek|Holdon|Zelnice|spraších|skálou|Nadýmač|Baba|Nebeský/.test(l[0])?18:9,fact:PLACE_FACTS[l[0]]})});
+  game.M.LM.forEach(l=>{
+    if(!PLACE_FACTS[l[0]])return;
+    const pond=shore[l[0]];
+    const r=pond?pond.r*0.85+6:(/Lhota|Lipiny/.test(l[0])?30:/zámek|Šerka|Jirsák|Březina|jezírka|Čížek|Holdon|Zelnice|spraších|skálou/.test(l[0])?18:9);
+    DISC.push({id:'lm:'+l[0],name:l[0],x:pond?pond.cx:l[1],z:pond?pond.cz:l[2],r,fact:PLACE_FACTS[l[0]]});
+  });
   function checkDiscover(){
     if(!game.S.visited)game.S.visited={};
     for(const d of DISC){
@@ -403,7 +482,9 @@ export function initExtras(){
   }
   function albumHtml(){
     const v=game.S.visited||{};const got=DISC.filter(d=>v[d.id]);
-    return '<h3>Zajímavosti o Bolehošti ('+got.length+' / '+DISC.length+' míst navštíveno)</h3>'+(got.length?got.map(d=>'<div class="row"><div><b>'+d.name+'</b><small>'+d.fact+'</small></div></div>').join(''):'<p>Procházej obec a objevuj místa – každé prozradí zajímavost.</p>')
+    return '<h3>Zajímavosti o Bolehošti ('+got.length+' / '+DISC.length+' míst navštíveno)</h3>'+DISC.map(d=>v[d.id]
+      ?'<div class="row"><div><b style="color:#1a9a4a">✅ '+d.name+'</b><small>'+d.fact+'</small></div></div>'
+      :'<div class="row"><div><b>'+d.name+'</b><small>Ještě jsi tu nebyl.</small></div></div>').join('')
       +'<p style="font-size:12px;color:#889">* poloha hospody a zvoničky je odhadnutá podle mapy.</p>';
   }
 

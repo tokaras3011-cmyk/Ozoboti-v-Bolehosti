@@ -181,11 +181,11 @@ addEventListener('keydown',e=>{
   }
   if(e.code==='KeyM')game.X.toggleMute();
   if(game.modalOpen)return;
-  if(e.key==='+'||e.key==='='||e.code==='NumpadAdd'){nudgeZoom(-0.14);e.preventDefault();return}
-  if(e.key==='-'||e.code==='Minus'||e.code==='NumpadSubtract'){nudgeZoom(0.14);e.preventDefault();return}
-  if(e.code==='Digit1')game.useItem('magnet');
-  if(e.code==='Digit2')game.useItem('freeze');
-  if(e.code==='Digit3')game.useItem('trap');
+  if(e.code==='Digit1'){game.useItem('magnet');return}
+  if(e.code==='Digit2'){game.useItem('freeze');return}
+  if(e.code==='Digit3'){game.useItem('trap');return}
+  if(e.code==='PageUp'||e.code==='NumpadAdd'){nudgeZoom(-0.14);e.preventDefault();return}
+  if(e.code==='PageDown'||e.code==='NumpadSubtract'){nudgeZoom(0.14);e.preventDefault();return}
   if(e.code==='KeyV'){
     if(!game.S.vehs.length){game.toast('Nemáš žádné vozidlo – kup v obchodě','#ffb347');return}
     const owned=game.S.vehs.map(id=>game.VEH.findIndex(v=>v.id===id));
@@ -296,8 +296,10 @@ const pv={x:game.H.x,z:game.H.z,y:0,vy:0,face:0};
 let immune=0,walkT=0,time=0,fullCd=0,edgeTold=false;
 function caughtBy(g){
   game.sfx.hit();
-  if(game.carry.length)game.toast('🐕 '+(g.kind==='pes'?'Pes':'Býk')+' tě chytil! Přišel jsi o '+game.carry.length+' Ozobotů.','#ff6060');
-  else game.toast('Chytil tě '+(g.kind==='pes'?'pes':'býk')+'! Zpátky domů.','#ff6060');
+  const female=g.kind==='kráva',who=g.kind==='pes'?'pes':female?'kráva':'býk',Who=g.kind==='pes'?'Pes':female?'Kráva':'Býk';
+  const verb=female?'chytila':'chytil',icon=g.kind==='pes'?'🐕 ':female?'🐄 ':'🐂 ';
+  if(game.carry.length)game.toast(icon+Who+' tě '+verb+'! Přišel jsi o '+game.carry.length+' Ozobotů.','#ff6060');
+  else game.toast((female?'Chytila':'Chytil')+' tě '+who+'! Zpátky domů.','#ff6060');
   game.carry=[];game.refreshCarry();game.refreshHud();
   pv.x=game.H.x;pv.z=game.H.z;pv.y=0;pv.vy=0;immune=3;
 }
@@ -328,6 +330,14 @@ function tickPlayer(dt){
   if(pv.y<=0.001&&game.keys.Space&&!game.modalOpen&&!game.X.locked()&&(!vh||vh.jump)){pv.vy=11}
   pv.vy-=30*dt;pv.y+=pv.vy*dt;if(pv.y<0){pv.y=0;pv.vy=0}
   game.resolve(pv,vh?vh.rad:0.45);
+  game.forestTold=Math.max(0,(game.forestTold||0)-dt);
+  if(game.forests&&game.forestTold<=0){
+    for(const f of game.forests){
+      if(Math.hypot(pv.x-f.x,pv.z-f.z)<f.r+(vh?vh.rad:0.45)+0.2){
+        game.forestTold=7;game.toast(vh?'Lesem se nedá jet.':'Lesem neprojdeš.','#b6e07a',2.2);break;
+      }
+    }
+  }
   pv.x=game.clamp(pv.x,game.RX0+2,game.RX1-2);pv.z=game.clamp(pv.z,game.RZ0+2,game.RZ1-2);
   const ground=game.gy(pv.x,pv.z);
   game.player.position.set(pv.x,ground+pv.y,pv.z);game.player.rotation.y=pv.face;

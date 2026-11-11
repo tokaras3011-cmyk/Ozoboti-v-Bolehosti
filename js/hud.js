@@ -14,18 +14,23 @@ const mm=(x,z)=>[(game.RX1-x)*MS,(game.RZ1-z)*MS];
 const miniBase=document.createElement('canvas');miniBase.width=mini.width;miniBase.height=mini.height;
 {
   const g=miniBase.getContext('2d');g.fillStyle='#bfe6a0';g.fillRect(0,0,miniBase.width,miniBase.height);
+  (game.hills||[]).forEach(h=>{const [a,b]=mm(h.x,h.z);g.fillStyle='#7eae58';g.beginPath();g.arc(a,b,(h.r+h.b)*MS,0,7);g.fill();g.fillStyle='#d4ee9a';g.beginPath();g.arc(a,b,h.r*MS,0,7);g.fill()});
   g.fillStyle='#4aa8ff';game.M.W.forEach(([n,p])=>{g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.fill()});
   g.strokeStyle='#4aa8ff';g.lineWidth=1;game.M.ST.forEach(p=>{g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke()});
   game.M.R.forEach(([k,p])=>{g.strokeStyle=k?'#b99a66':'#fff';g.lineWidth=k?1.7:3.2;g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke()});
+  if(game.rail){g.strokeStyle='#3c3c3c';g.lineWidth=2;g.beginPath();game.rail.forEach((p,i)=>{const [a,b]=mm(p[0],p[1]);i?g.lineTo(a,b):g.moveTo(a,b)});g.stroke()}
   game.M.B.forEach(b=>{const {outer}=game.buildingRings(b);g.fillStyle=b[5]===2?'#e04030':b[5]===3?'#e0b000':'#8a7a6a';g.beginPath();outer.forEach((p,i)=>{const [a,c]=mm(p[0],p[1]);i?g.lineTo(a,c):g.moveTo(a,c)});g.fill()});
+  (game.pitches||[]).forEach(p=>{const [a,b]=mm(p.x,p.z),rw=p.w*MS,rh=p.d*MS;g.fillStyle='#2f9a3a';g.fillRect(a-rw/2,b-rh/2,rw,rh);g.strokeStyle='#fff';g.lineWidth=1;g.strokeRect(a-rw/2,b-rh/2,rw,rh)});
   g.font='bold 10px Arial';g.fillStyle='#124';game.M.LM.forEach(([n,x,z])=>{const [a,b]=mm(x,z);g.fillText(n,a+4,b-3)});
-  (game.meadow||[]).forEach(m=>{const [a,b]=mm(m.x,m.z);g.fillStyle=m.k==='tree'?'#246b2e':m.k==='hay'?'#c9842a':m.k==='wheat'?'#d7b23a':'#5ea044';g.beginPath();g.arc(a,b,m.k==='tree'?3:2,0,7);g.fill()});
+  (game.meadow||[]).forEach(m=>{const [a,b]=mm(m.x,m.z);g.fillStyle=m.k==='tree'?'#1e6b30':m.k==='hay'?'#c9842a':m.k==='wheat'?'#d7b23a':'#5ea044';g.beginPath();g.arc(a,b,m.k==='tree'?(m.r||8)*MS:2,0,7);g.fill()});
   g.strokeStyle='#e23b2b';g.lineWidth=4;g.strokeRect(2,2,miniBase.width-4,miniBase.height-4);
 }
 function drawMini(){
   mctx.drawImage(miniBase,0,0);
   const dot=(x,z,c,r)=>{const [a,b]=mm(x,z);mctx.fillStyle=c;mctx.beginPath();mctx.arc(a,b,r,0,7);mctx.fill()};
   dot(game.H.x,game.H.z,'#ffe94a',5);game.garages.forEach(h=>dot(h.x,h.z,'#ff4fb8',3.5));dot(game.PAST.x,game.PAST.z,'#ffb000',5);
+  if(game.HERD)dot(game.HERD.x,game.HERD.z,'#c45a2a',4);
+  if(game.train)dot(game.train.x,game.train.z,'#e02318',3.5);
   game.robots.forEach(r=>{if(r.alive&&Math.hypot(r.x-game.pv.x,r.z-game.pv.z)<60)dot(r.x,r.z,r.quest?'#ff4fb8':'#'+r.lm.color.getHexString(),r.quest?4:2.6)});
   game.traps.forEach(t=>dot(t.x,t.z,'#22ffee',3));
   (game.peers||[]).forEach(p=>{
@@ -56,11 +61,13 @@ function buildBig(){
   bigK=h/(game.RZ1-game.RZ0);bigC.width=w;bigC.height=h;
   const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),k=bigK;
   g.fillStyle='#cdebb0';g.fillRect(0,0,w,h);
+  (game.hills||[]).forEach(h=>{const [a,b]=bigP(h.x,h.z);g.fillStyle='#7eae58';g.beginPath();g.arc(a,b,(h.r+h.b)*k,0,7);g.fill();g.fillStyle='#e4f6b4';g.beginPath();g.arc(a,b,h.r*k,0,7);g.fill()});
   const poly=(pts,fill)=>{g.beginPath();for(let i=0;i<pts.length;i+=2){const[a,b]=bigP(pts[i],pts[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}if(fill)g.fill();else g.stroke()};
   g.fillStyle='#5ab4ff';game.M.W.forEach(([n,p])=>poly(p,true));
   g.strokeStyle='#5ab4ff';g.lineWidth=Math.max(2,1.4*k);g.lineJoin='round';game.M.ST.forEach(p=>poly(p,false));
   g.lineCap='round';
   game.M.R.forEach(([kk,p])=>{g.strokeStyle=kk?'#b99a66':'#ffffff';g.lineWidth=((kk?game.roadHalf[1]:game.roadHalf[0])*2)*k;poly(p,false)});
+  if(game.rail){g.strokeStyle='#2c2c2c';g.lineWidth=Math.max(3,2.2*k);g.beginPath();game.rail.forEach((p,i)=>{const [a,b]=bigP(p[0],p[1]);i?g.lineTo(a,b):g.moveTo(a,b)});g.stroke()}
   game.M.B.forEach(b=>{
     const {outer}=game.buildingRings(b),flat=[];
     for(const p of outer)flat.push(p[0],p[1]);
@@ -68,13 +75,14 @@ function buildBig(){
     poly(flat,true);
   });
   g.textAlign='center';
+  (game.pitches||[]).forEach(p=>{const [a,b]=bigP(p.x,p.z),rw=p.w*k,rh=p.d*k;g.fillStyle='#2f9a3a';g.fillRect(a-rw/2,b-rh/2,rw,rh);g.strokeStyle='#fff';g.lineWidth=2;g.strokeRect(a-rw/2,b-rh/2,rw,rh);g.beginPath();g.moveTo(a,b-rh/2);g.lineTo(a,b+rh/2);g.stroke();if(p.shops)halo(g,p.name,a,b-rh/2-4,'#14501e','bold 13px Segoe UI,Arial')});
   game.M.LM.forEach(([n,x,z])=>{
     const[a,b]=bigP(x,z);
     const ves=/Lhota|Lipiny|zámek/.test(n),mist=/Šerka|Jirsák|Březina|jezírka|Čížek|Holdon|Zelnice|spraších|skálou/.test(n);
     halo(g,n,a,b-6,ves?'#7a4a00':mist?'#2f6a28':(/Nadýmač|Baba|Nebeský/.test(n)?'#0a5aa8':'#8a1a10'),ves?'bold 17px Segoe UI,Arial':'bold 15px Segoe UI,Arial');
   });
   MAP.PLACES.forEach(p=>{const[a,b]=bigP(p.x,p.z);g.fillStyle='#1a6a2a';g.beginPath();g.arc(a,b,4,0,7);g.fill();halo(g,p.n+(p.approx?' *':''),a,b-8,'#14501e','bold 14px Segoe UI,Arial')});
-  (game.meadow||[]).forEach(m=>{const[a,b]=bigP(m.x,m.z);g.fillStyle=m.k==='tree'?'#246b2e':m.k==='hay'?'#c9842a':m.k==='wheat'?'#d7b23a':'#5ea044';g.beginPath();g.arc(a,b,m.k==='tree'?7:4.5,0,7);g.fill()});
+  (game.meadow||[]).forEach(m=>{const[a,b]=bigP(m.x,m.z);g.fillStyle=m.k==='tree'?'#1b6430':m.k==='hay'?'#c9842a':m.k==='wheat'?'#d7b23a':'#5ea044';g.beginPath();g.arc(a,b,m.k==='tree'?(m.r||8)*k:4.5,0,7);g.fill()});
   // legenda
   g.textAlign='left';  g.fillStyle='#fffd';g.fillRect(8,8,300,164);g.strokeStyle='#789';g.lineWidth=1;g.strokeRect(8,8,300,164);
   g.font='bold 13px Segoe UI,Arial';g.fillStyle='#123';
@@ -88,6 +96,8 @@ function drawBig(){
   const dot=(x,z,c,r,st)=>{const[a,b]=bigP(x,z);g.fillStyle=c;g.beginPath();g.arc(a,b,r,0,7);g.fill();g.strokeStyle=st||'#000';g.lineWidth=2;g.stroke()};
   dot(game.H.x,game.H.z,'#ffe94a',9);halo(g,'DOMOV',bigP(game.H.x,game.H.z)[0],bigP(game.H.x,game.H.z)[1]-12,'#7a5a00','bold 15px Segoe UI,Arial');
   game.garages.forEach(h=>dot(h.x,h.z,'#ff4fb8',6));dot(game.PAST.x,game.PAST.z,'#ffb000',9);
+  if(game.HERD){dot(game.HERD.x,game.HERD.z,'#c45a2a',8);const[a,b]=bigP(game.HERD.x,game.HERD.z);halo(g,'Ohrada',a,b-12,'#6a3010','bold 14px Segoe UI,Arial')}
+  if(game.train){dot(game.train.x,game.train.z,'#e02318',7);const[a,b]=bigP(game.train.x,game.train.z);halo(g,'Vlak',a,b-10,'#8a1010','bold 13px Segoe UI,Arial')}
   if(!mayorIt)mayorIt=game.interact.find(i=>/starost/i.test(i.text()));
   if(mayorIt){const[a,b]=bigP(mayorIt.x,mayorIt.z);halo(g,'🎩 Starosta',a,b-8,'#5a3a00','bold 13px Segoe UI,Arial')}
   game.traps.forEach(t=>dot(t.x,t.z,'#22ffee',6));
@@ -189,7 +199,7 @@ function tickPrompt(dt){  game.nearest=null;let best=1e9;
   const cp=game.$('compass'),et=game.X.compassTarget(),tg=et||(vm&&{x:vm.x,z:vm.z,label:vm.place});
   if(tg){
     const tdx=tg.x-game.pv.x,tdz=tg.z-game.pv.z,ang=Math.atan2(tdx*Math.cos(game.yaw)-tdz*Math.sin(game.yaw),-(tdx*Math.sin(game.yaw)+tdz*Math.cos(game.yaw)));
-    cp.style.display='block';game.$('arrow').style.transform='rotate('+ang+'rad)';game.$('cdist').textContent=tg.label+' · '+Math.round(Math.hypot(tdx,tdz)*2)+' m';
+    cp.style.display='flex';game.$('arrow').style.transform='rotate('+ang+'rad)';game.$('cdist').textContent=tg.label+' · '+Math.round(Math.hypot(tdx,tdz)*2)+' m';
   }else cp.style.display='none';
 }
 api.tickPrompt=tickPrompt;
@@ -224,7 +234,9 @@ function controlsModal(){
       +'<tr><td><kbd>N</kbd></td><td>Velká mapa</td></tr>'
       +'<tr><td><kbd>M</kbd></td><td>Zapnout nebo vypnout hudbu</td></tr>'
       +'<tr><td><kbd>Esc</kbd></td><td>Zavřít okno nebo mapu</td></tr>'
-      +'<tr><td><kbd>+</kbd><kbd>−</kbd> nebo kolečko</td><td>Přiblížit a oddálit kameru</td></tr>'
+      +'<tr><td><kbd>PgUp</kbd></td><td>Přiblížit kameru</td></tr>'
+      +'<tr><td><kbd>PgDn</kbd></td><td>Oddálit kameru</td></tr>'
+      +'<tr><td>Kolečko myši</td><td>Přiblížit a oddálit</td></tr>'
       +'<tr><td>Myš</td><td>Táhni po obrazovce a otáčej kameru</td></tr>'
       +'<tr><td>Telefon</td><td>Vlevo páčka: chůze. Prstem po hřišti: otáčení. Tlačítka vpravo dole: skok, běh a akce.</td></tr>'
       +'</tbody></table>';
@@ -260,7 +272,7 @@ function shopModal(){
 function hatchModal(){
   openModal('🔧 Dílna',el=>{
     el.innerHTML='';
-    if(!game.hatch)row(el,'Sestavit nového robota','Za 15 s z dílny vyjede náhodný pomocník, který ti vydělává.',game.cost.build(),()=>{game.S.money-=game.cost.build();game.hatch={t:15}});
+    if(!game.hatch)row(el,'Sestavit nového robota','Za 15 s z dílny vyjede pomocník. Nejčastěji Robo-pes, Robo-pavouk nebo dron.',game.cost.build(),()=>{game.S.money-=game.cost.build();game.hatch={t:15}});
     else if(game.hatch.t>0)row(el,'Sestavuje se…','Zbývá '+Math.ceil(game.hatch.t)+' s',null,()=>{},'⏳');
     else row(el,'Robot je hotový!','Klikni a uvidíš, co z dílny vyjelo.',null,()=>{
       const tot=game.HELP.reduce((a,p)=>a+p.w,0);let r=Math.random()*tot,i=0;
@@ -341,7 +353,7 @@ game.$('go').onclick=()=>{
   prevRenderer.dispose();
   game.pv.x=game.H.x;game.pv.z=game.H.z;
   game.setVehicle(-1);
-  game.ensureMissions();
+  game.ensureMissions(true);
   game.refreshHud();game.rebuildPets();game.refreshCarry();game.save();game.X.onStart();
   game.toast('Ahoj '+name+'! Chytej Ozoboty – svítí a utíkají před tebou!','#ffffff');
 };

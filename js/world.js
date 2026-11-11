@@ -24,10 +24,13 @@ const ponds=game.M.W.map(([name,pts])=>{
   const wy=Math.min(...xs.map((x,i)=>baseH(x,zs[i])))-0.15;
   return {name,pts,cx,cz,r,wy};
 });
+// Lovecký zámeček je mimo výškovou mřížku (terén tam padá do roviny). Kopec má rovinku pod zámkem a pozvolný svah.
+const hills=[{x:-362.3,z:-320.1,r:24,b:38,h:16}];
 function heightAt(x,z){
   let v=baseH(x,z);
   for(const p of pads){const d=Math.hypot(x-p.x,z-p.z);if(d<p.r+p.b)v+=(p.h-v)*(1-game.smooth(p.r,p.r+p.b,d))}
   for(const p of ponds){const d=Math.hypot(x-p.cx,z-p.cz);if(d<p.r*1.05+5){const t=1-game.smooth(p.r*1.05,p.r*1.05+5,d);v=Math.min(v,v+((p.wy-0.9)-v)*t)}}
+  for(const h of hills){const d=Math.hypot(x-h.x,z-h.z);if(d<h.r+h.b)v+=h.h*(1-game.smooth(h.r,h.r+h.b,d))}
   return v;
 }
 const gy=heightAt;
@@ -75,6 +78,7 @@ const sfx={catch:()=>{beep(880,.07);setTimeout(()=>beep(1320,.09),70)},sell:()=>
   bind(game, "GLOW", () => GLOW);
   bind(game, "box", () => box);
   bind(game, "gy", () => gy);
+  bind(game, "hills", () => hills);
   bind(game, "label", () => label);
   bind(game, "mat", () => mat);
   bind(game, "placeLabel", () => placeLabel);
@@ -366,14 +370,119 @@ game.M.LM.forEach(([name,x,z])=>{
 });
 
 
+  bind(game, "instanced", () => instanced);
+  bind(game, "white", () => white);
+  initVlak();
   bind(game, "bgrid", () => bgrid);
   bind(game, "buildingRings", () => buildingRings);
   bind(game, "roadHalf", () => ROAD_HALF);
-  bind(game, "instanced", () => instanced);
   bind(game, "nearRoad", () => nearRoad);
   bind(game, "unitBox", () => unitBox);
-  bind(game, "white", () => white);
   bind(game, "winMat", () => winMat);
+}
+
+function initVlak(){
+  const RAIL=[[461,406],[456.5,369],[456,339.5],[450,304],[445,274],[439.5,249.5],[434,221.5],[429,170.5],[424.5,128.5],[421.5,77.5],[421,44.5],[423,26],[420.5,7],[419.5,-22.5],[421,-46.5],[425.5,-68.5],[432.5,-89.5],[440,-105],[451,-125.5],[471,-162.5],[474,-168.5]];
+  const seg=[]; let railLen=0;
+  for(let i=0;i<RAIL.length-1;i++){const l=Math.hypot(RAIL[i+1][0]-RAIL[i][0],RAIL[i+1][1]-RAIL[i][1]);seg.push(l);railLen+=l}
+  function at(dist){
+    dist=game.clamp(dist,0,railLen); let d=dist;
+    for(let i=0;i<seg.length;i++){
+      if(d<=seg[i]||i===seg.length-1){
+        const t=seg[i]?Math.min(1,d/seg[i]):0,a=RAIL[i],b=RAIL[i+1];
+        const x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t;
+        return {x,z,yaw:Math.atan2(b[0]-a[0],b[1]-a[1])};
+      }
+      d-=seg[i];
+    }
+  }
+  const sleepers=[],railsL=[],railsR=[];
+  for(let d=0;d<railLen;d+=2.6){
+    const p=at(d),c=Math.cos(p.yaw),s=Math.sin(p.yaw),y=game.gy(p.x,p.z);
+    sleepers.push({x:p.x,y,z:p.z,ry:p.yaw,sx:2.15,sy:0.16,sz:0.42,color:0x6a4324});
+    railsL.push({x:p.x+c*0.62,y:y+0.12,z:p.z-s*0.62,ry:p.yaw,sx:0.16,sy:0.14,sz:2.7,color:0x4a4e52});
+    railsR.push({x:p.x-c*0.62,y:y+0.12,z:p.z+s*0.62,ry:p.yaw,sx:0.16,sy:0.14,sz:2.7,color:0x4a4e52});
+  }
+  const railGeo=new THREE.BoxGeometry(1,1,1); railGeo.translate(0,0.5,0);
+  game.instanced(railGeo,game.white,sleepers,true);
+  game.instanced(railGeo,game.white,railsL.concat(railsR),true);
+  function loco(){
+    const g=new THREE.Group();
+    game.box(1.7,1.35,4.4,0xc42818,0,0.45,0.5,g);
+    game.box(1.55,1.25,1.8,0x9a1c12,0,1.15,-1.15,g);
+    game.box(0.55,0.7,0.55,0x222222,0,2.4,1.7,g);
+    game.box(1.85,0.28,4.8,0x2a2a2a,0,0.16,0.3,g);
+    game.box(1.15,0.7,0.12,0xf2d24a,0,1.15,2.65,g);
+    [-1.6,-0.3,1.15].forEach(z=>{game.box(0.32,0.5,0.5,0x111111,-0.95,0.05,z,g);game.box(0.32,0.5,0.5,0x111111,0.95,0.05,z,g)});
+    game.shadowOn(g);game.scene.add(g);return g;
+  }
+  function wagon(col){
+    const g=new THREE.Group();
+    game.box(1.65,1.4,4.3,col,0,0.7,0,g);
+    game.box(1.8,0.26,4.6,0x2a2a2a,0,0.12,0,g);
+    [-1.35,1.35].forEach(z=>{game.box(0.32,0.48,0.48,0x111111,-0.95,0.05,z,g);game.box(0.32,0.48,0.48,0x111111,0.95,0.05,z,g)});
+    game.shadowOn(g);game.scene.add(g);return g;
+  }
+  const cars=[{g:loco(),off:7},{g:wagon(0x2f7a3a),off:0.4},{g:wagon(0xd08a28),off:-6.2}];
+  cars.forEach(c=>{c.blk=game.addBoxObs(0,0,4.5,1.7,0);c.blk.hw=0;c.blk.hd=0;c.blk.R=0});
+  const cross={x:432.7,z:-90};
+  let crossS=0,best=1e9;
+  for(let d=0;d<=railLen;d+=2){const p=at(d),dd=Math.hypot(p.x-cross.x,p.z-cross.z);if(dd<best){best=dd;crossS=d}}
+  const roadAng=Math.atan2(0.16,-0.99);
+  const rx=Math.cos(roadAng),rz=Math.sin(roadAng),px=-rz,pz=rx;
+  const gates=[];
+  [-1,1].forEach(side=>{
+    const cx=cross.x+rx*side*7.2, cz=cross.z+rz*side*7.2;
+    [-1,1].forEach(edge=>{
+      const post=new THREE.Group();
+      post.position.set(cx+px*edge*3.0, game.gy(cx,cz), cz+pz*edge*3.0);
+      post.rotation.y=Math.atan2(pz*edge, -px*edge);
+      game.box(0.32,2.6,0.32,0xe8e8e8,0,0,0,post);
+      const hinge=new THREE.Group();hinge.position.y=1.55;post.add(hinge);
+      for(let i=0;i<6;i++)game.box(0.5,0.18,0.48,i%2?0xd01018:0xf7f7f7,0.28+i*0.5,-0.09,0,hinge);
+      const lamp=game.box(0.4,0.4,0.4,0xff2020,0,2.55,0,post);
+      game.scene.add(post);gates.push({hinge,lamp});
+    });
+  });
+  const blocks=[-1,1].map(side=>{
+    const o=game.addBoxObs(cross.x+rx*side*7.2, cross.z+rz*side*7.2, 6.2, 0.55, roadAng+Math.PI/2);
+    o.hw=0;o.hd=0;o.R=0;o._hw=3.1;o._hd=0.28;return o;
+  });
+  game.placeLabel(game.label('Závory','#ffd0d0',0.7), cross.x, 4.2, cross.z+6);
+  let s=railLen*0.35, dir=1, gate=1, told=0, pause=0;
+  const train={x:0,z:0};
+  function tickTrain(dt){
+    if(pause>0)pause-=dt;
+    else{
+      s+=dir*16*dt;
+      if(s>railLen-12){s=railLen-12;dir=-1;pause=1.3}
+      else if(s<12){s=12;dir=1;pause=1.3}
+    }
+    const head=at(s);
+    train.x=head.x;train.z=head.z;
+    cars.forEach(c=>{
+      const p=at(s+c.off*dir);
+      const yaw=p.yaw+(dir<0?Math.PI:0);
+      c.g.position.set(p.x, game.gy(p.x,p.z), p.z);
+      c.g.rotation.y=yaw;
+      const a=Math.atan2(Math.cos(yaw), Math.sin(yaw));
+      c.blk.x=p.x;c.blk.z=p.z;c.blk.a=a;c.blk.c=Math.cos(a);c.blk.s=Math.sin(a);
+      c.blk.hw=2.25;c.blk.hd=0.9;c.blk.R=4;
+    });
+    const along=Math.abs(s-crossS);
+    const want=along<86?0:1;
+    if(want<gate&&told<=0){told=8;if(game.sfx)game.sfx.blink()}
+    told=Math.max(0,told-dt);
+    gate+=(want-gate)*Math.min(1,dt*1.5);
+    const lift=1.15*gate;
+    gates.forEach(g=>{g.hinge.rotation.z=lift;g.lamp.visible=gate<0.92&&Math.sin(game.time*14)>0});
+    const shut=gate<0.28;
+    blocks.forEach(o=>{o.hw=shut?o._hw:0;o.hd=shut?o._hd:0;o.R=shut?4:0});
+  }
+  const p0=at(s); train.x=p0.x; train.z=p0.z;
+  bind(game,'rail',()=>RAIL);
+  bind(game,'train',()=>train);
+  bind(game,'tickTrain',()=>tickTrain);
 }
 
 export function initGarazeSouseduPsiByk() {
@@ -415,6 +524,54 @@ game.fence(game.PAST.x,game.PAST.z,34,34,0xbbbbbb);
 game.placeLabel(game.label('Pastvina – pozor, býk!',"#ffd21a",0.9),game.PAST.x,6,game.PAST.z-17);
 guards.push({m:makeBull(game.PAST.x,game.PAST.z),hx:game.PAST.x,hz:game.PAST.z,spd:7.4,sight:15,leash:22,kind:'býk',frozen:0});
 
+/* Ohrada u Agrospolu – krávy a býci útočí jen uvnitř plotu */
+function makeHerdAnimal(x,z,bull){
+  const g=new THREE.Group(),body=bull?0x2a2a2a:0xf7f4ee,spot=bull?0x111111:0x8a4b28;
+  game.box(1.8,0.9,0.8,body,0,0.75,0,g);
+  if(!bull){game.box(0.5,0.35,0.82,spot,-0.25,1.0,0,g);game.box(0.4,0.28,0.82,spot,0.4,0.65,0,g)}
+  game.box(0.55,0.55,0.55,body,1.05,1.15,0,g);
+  if(bull){
+    game.box(0.1,0.12,0.85,0xf4f4f4,1.15,1.7,0,g);
+    game.box(0.1,0.38,0.12,0xf4f4f4,1.15,1.5,0.48,g);game.box(0.1,0.38,0.12,0xf4f4f4,1.15,1.5,-0.48,g);
+  }else{
+    game.box(0.1,0.32,0.12,0xf3d7b0,1.05,1.55,0.22,g);game.box(0.1,0.32,0.12,0xf3d7b0,1.05,1.55,-0.22,g);
+  }
+  game.box(0.16,0.16,0.2,bull?0xff3030:0x222222,1.32,1.2,0,g);
+  [[-0.5,0.28],[0.5,0.28],[-0.5,-0.28],[0.5,-0.28]].forEach(([a,b])=>game.box(0.22,0.75,0.22,bull?0x1a1a1a:0x6a4020,a,0,b,g));
+  const ice=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.9,1.5),new THREE.MeshLambertMaterial({color:0x9fe6ff,transparent:true,opacity:0.55}));
+  ice.position.set(0.15,1.0,0);ice.visible=false;g.add(ice);g.userData.ice=ice;
+  g.position.set(x,game.gy(x,z),z);g.scale.setScalar(bull?1.12:1);game.shadowOn(g);game.scene.add(g);return g;
+}
+{
+  const hx=-125,hz=112,hw=32,hd=22,x0=hx-hw/2,x1=hx+hw/2,z0=hz-hd/2,z1=hz+hd/2,gate=5;
+  const posts=(ax,az,bx,bz)=>{
+    const len=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.round(len/3.1));
+    for(let i=0;i<=n;i++){const t=i/n,x=ax+(bx-ax)*t,z=az+(bz-az)*t;game.shadowOn(game.box(0.42,1.7,0.42,0x8a5a2a,x,0,z))}
+  };
+  const rails=(x,z,len,horiz)=>{
+    game.shadowOn(game.box(horiz?len:0.14,0.14,horiz?0.14:len,0xd5dbe3,x,1.15,z));
+    game.shadowOn(game.box(horiz?len:0.14,0.14,horiz?0.14:len,0xd5dbe3,x,0.55,z));
+  };
+  posts(x0,z0,x1,z0);rails((x0+x1)/2,z0,hw,true);game.addBoxObs((x0+x1)/2,z0,hw,0.7);
+  posts(x0,z0,x0,z1);rails(x0,(z0+z1)/2,hd,false);game.addBoxObs(x0,(z0+z1)/2,0.7,hd);
+  posts(x1,z0,x1,z1);rails(x1,(z0+z1)/2,hd,false);game.addBoxObs(x1,(z0+z1)/2,0.7,hd);
+  const side=(hw-gate)/2;
+  posts(x0,z1,x0+side,z1);rails(x0+side/2,z1,side,true);game.addBoxObs(x0+side/2,z1,side,0.7);
+  posts(x1-side,z1,x1,z1);rails(x1-side/2,z1,side,true);game.addBoxObs(x1-side/2,z1,side,0.7);
+  game.placeLabel(game.label('Ohrada Agrospolu – krávy a býci','#ffd7a8',0.85),hx,6.2,z1+3);
+  const pen={x0,x1,z0,z1};
+  const herd=[];
+  for(let i=0;i<20;i++)herd.push(i<6);
+  for(let i=herd.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[herd[i],herd[j]]=[herd[j],herd[i]]}
+  for(let i=0;i<20;i++){
+    const col=i%5,row=(i/5)|0;
+    const x=x0+4+col*((hw-8)/4),z=z0+3.2+row*((hd-6.4)/3);
+    const bull=herd[i],m=makeHerdAnimal(x,z,bull);
+    guards.push({m,hx:x,hz:z,spd:bull?6.3:5.1,sight:26,leash:40,kind:bull?'býk':'kráva',frozen:0,pen,wT:game.rnd(0.4,3)});
+  }
+  game.HERD={x:hx,z:hz,x0,x1,z0,z1};
+}
+
 
   bind(game, "garages", () => garages);
   bind(game, "guards", () => guards);
@@ -423,6 +580,11 @@ guards.push({m:makeBull(game.PAST.x,game.PAST.z),hx:game.PAST.x,hz:game.PAST.z,s
 export function initDomov() {
 /* Domov */
 const SELL={x:game.H.x-9,z:game.H.z-3},SHOP={x:game.H.x+9,z:game.H.z-3},HATCH={x:game.H.x,z:game.H.z-12};
+const pitches=[
+  {name:'Hřiště TJ Sokol',x:-29,z:-142,w:26,d:16,shops:false},
+  {name:'Hřiště Lhota',x:-273.6,z:-388.6,w:32,d:20,shops:true},
+  {name:'Hřiště Lipiny',x:390,z:-322,w:24,d:16,shops:'s'}
+];
 game.fence(game.H.x,game.H.z-5,32,27);
 game.placeLabel(game.label('DOMOV',"#ffe94a",1.2),game.H.x,8,game.H.z+8.5);
 game.stall(SELL.x,SELL.z,0xf5c400,'Výkup Ozobotů');
@@ -437,11 +599,22 @@ const workRobot=game.makeOzo(0x22ffaa,1.6);workRobot.g.position.set(HATCH.x+3.3,
   bind(game, "HATCH", () => HATCH);
   bind(game, "SELL", () => SELL);
   bind(game, "SHOP", () => SHOP);
+  bind(game, "pitches", () => pitches);
   bind(game, "workRobot", () => workRobot);
 }
 
 export function initStromyKvetiny() {
 /* Stromy, květiny */
+const onPitch=(x,z,pad=0)=>(game.pitches||[]).some(p=>Math.abs(x-p.x)<p.w/2+pad&&Math.abs(z-p.z)<p.d/2+pad);
+const nearRail=(x,z,pad)=>{
+  const r=game.rail; if(!r)return false;
+  for(let i=0;i<r.length-1;i++){
+    const ax=r[i][0],az=r[i][1],bx=r[i+1][0],bz=r[i+1][1],vx=bx-ax,vz=bz-az,L=vx*vx+vz*vz||1;
+    const t=Math.max(0,Math.min(1,((x-ax)*vx+(z-az)*vz)/L));
+    if((x-ax-vx*t)**2+(z-az-vz*t)**2<pad*pad)return true;
+  }
+  return false;
+};
 {
   const x0=game.RX0+1.4,x1=game.RX1-1.4,z0=game.RZ0+1.4,z1=game.RZ1-1.4,step=12;
   const posts=[],rails=[];
@@ -465,9 +638,10 @@ export function initStromyKvetiny() {
   const [ox0,ox1,oz0,oz1]=game.M.region;
   for(let i=0,tries=0;i<300&&tries<5000;tries++){
     const x=game.rnd(ox0+6,ox1-6),z=game.rnd(oz0+6,oz1-6),s=game.rnd(0.8,1.4);
-    if(!game.freeAt(x,z,3.5)||game.nearRoad(x,z,2.5))continue;
+    if(!game.freeAt(x,z,3.5)||game.nearRoad(x,z,2.5)||onPitch(x,z,4))continue;
     if(Math.abs(x-game.H.x)<22&&Math.abs(z-game.H.z)<24)continue;
     if(Math.abs(x-game.PAST.x)<20&&Math.abs(z-game.PAST.z)<20)continue;
+    if(game.HERD&&x>game.HERD.x0-3&&x<game.HERD.x1+3&&z>game.HERD.z0-3&&z<game.HERD.z1+3)continue;
     const y=game.gy(x,z);
     trunks.push({x,y,z,sx:0.7*s,sy:2.4*s,sz:0.7*s,color:0x7a4a22});
     if(i%3===0){round.push({x,y:y+1.6*s,z,sx:4.2*s,sy:4.2*s,sz:4.2*s,color:[0x3a9a3a,0x52b040,0x2f8a3a][(i>>1)%3]})}
@@ -483,6 +657,7 @@ export function initStromyKvetiny() {
 {
   const [ox0,ox1,oz0,oz1]=game.M.region;
   const meadow=[];
+  const forests=[];
   const inMeadow=(x,z)=>x>game.RX0+18&&x<game.RX1-18&&z>game.RZ0+18&&z<game.RZ1-18&&(x<ox0-8||x>ox1+8||z<oz0-8||z>oz1+8);
   const trunks=[],spruce1=[],spruce2=[],round=[],bush=[],rock=[],hay=[],crop=[];
   const treeAt=(x,z,s,i)=>{
@@ -494,31 +669,45 @@ export function initStromyKvetiny() {
     game.addCircObs(x,z,0.75*s);
     return true;
   };
-  const grove=(cx,cz,n)=>{
+  const grove=(cx,cz,big)=>{
+    if(!inMeadow(cx,cz)||!game.freeAt(cx,cz,10)||onPitch(cx,cz,28)||nearRail(cx,cz,26))return;
+    if((game.hills||[]).some(h=>Math.hypot(cx-h.x,cz-h.z)<h.r+h.b+22))return;
+    const R=big?38:28;
+    const br=game.freeAt(cx,cz,R*0.9)?R*0.9:(game.freeAt(cx,cz,22)?22:16);
+    const want=br>30?78:br>20?48:30;
     let got=0;
-    for(let k=0;k<n*3&&got<n;k++){
-      const x=cx+game.rnd(-18,18),z=cz+game.rnd(-18,18);
-      if(treeAt(x,z,game.rnd(0.85,1.45),got))got++;
+    for(let k=0;k<want*6&&got<want;k++){
+      const a=game.rnd(0,6.28),d=game.rnd(0.6,R),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d,s=game.rnd(1.45,2.25);
+      if(!inMeadow(x,z)||onPitch(x,z,2)||nearRail(x,z,4))continue;
+      const y=game.gy(x,z);
+      trunks.push({x,y,z,sx:0.75*s,sy:2.6*s,sz:0.75*s,color:0x6a3e1c});
+      if(got%5===0)round.push({x,y:y+1.7*s,z,sx:4.6*s,sy:4.4*s,sz:4.6*s,color:[0x1c6a28,0x2f8a32,0x246b2e][got%3]});
+      else{spruce1.push({x,y:y+1.7*s,z,sx:4.8*s,sy:4.0*s,sz:4.8*s,color:0x1a6828});spruce2.push({x,y:y+3.8*s,z,sx:3.4*s,sy:3.4*s,sz:3.4*s,color:0x228034});}
+      if(d>br-0.6)game.addCircObs(x,z,0.9*s);
+      got++;
     }
-    if(got>2)meadow.push({x:cx,z:cz,k:'tree'});
+    if(got<14)return;
+    game.addCircObs(cx,cz,br);
+    meadow.push({x:cx,z:cz,k:'tree',r:br});
+    forests.push({x:cx,z:cz,r:br});
   };
-  [[game.RX0+46,game.RZ0+46],[game.RX1-46,game.RZ0+46],[game.RX0+46,game.RZ1-46],[game.RX1-46,game.RZ1-46]].forEach(([x,z])=>grove(x,z,18));
-  for(let g=0,t=0;g<28&&t<600;t++){
-    const x=game.rnd(game.RX0+36,game.RX1-36),z=game.rnd(game.RZ0+36,game.RZ1-36);
+  [[game.RX0+72,game.RZ0+72],[game.RX1-72,game.RZ0+72],[game.RX0+72,game.RZ1-72],[game.RX1-72,game.RZ1-72]].forEach(([x,z])=>grove(x,z,true));
+  for(let g=0,t=0;g<26&&t<700;t++){
+    const x=game.rnd(game.RX0+55,game.RX1-55),z=game.rnd(game.RZ0+55,game.RZ1-55);
     if(!inMeadow(x,z))continue;
-    grove(x,z,7+(t%6));
+    grove(x,z,t%4!==0);
     g++;
   }
   for(let i=0,t=0;i<160&&t<1000;t++){
     const x=game.rnd(game.RX0+22,game.RX1-22),z=game.rnd(game.RZ0+22,game.RZ1-22);
-    if(!inMeadow(x,z)||!game.freeAt(x,z,1.2))continue;
+    if(!inMeadow(x,z)||!game.freeAt(x,z,1.2)||onPitch(x,z,6)||nearRail(x,z,5))continue;
     const y=game.gy(x,z),s=game.rnd(0.7,1.35);
     bush.push({x,y,z,sx:1.7*s,sy:1.15*s,sz:1.7*s,color:i%2?0x3c9a34:0x2f7a2c});
     i++;
   }
   for(let i=0,t=0;i<55&&t<400;t++){
     const x=game.rnd(game.RX0+26,game.RX1-26),z=game.rnd(game.RZ0+26,game.RZ1-26);
-    if(!inMeadow(x,z)||!game.freeAt(x,z,1.6))continue;
+    if(!inMeadow(x,z)||!game.freeAt(x,z,1.6)||onPitch(x,z,6)||nearRail(x,z,5))continue;
     const y=game.gy(x,z),s=game.rnd(0.85,1.7);
     rock.push({x,y,z,sx:1.6*s,sy:game.rnd(0.55,1.15)*s,sz:1.45*s,color:i%3?0x8b8f88:0x6e726c});
     game.addCircObs(x,z,0.7*s);
@@ -526,7 +715,7 @@ export function initStromyKvetiny() {
   }
   for(let g=0,t=0;g<16&&t<240;t++){
     const x=game.rnd(game.RX0+30,game.RX1-30),z=game.rnd(game.RZ0+30,game.RZ1-30);
-    if(!inMeadow(x,z))continue;
+    if(!inMeadow(x,z)||onPitch(x,z,8)||nearRail(x,z,8))continue;
     let n=0;
     for(let k=0;k<4;k++){
       const hx=x+game.rnd(-3.2,3.2),hz=z+game.rnd(-3.2,3.2);
@@ -539,7 +728,7 @@ export function initStromyKvetiny() {
   }
   for(let g=0,t=0;g<14&&t<220;t++){
     const x=game.rnd(game.RX0+40,game.RX1-40),z=game.rnd(game.RZ0+40,game.RZ1-40);
-    if(!inMeadow(x,z)||!game.freeAt(x,z,7))continue;
+    if(!inMeadow(x,z)||!game.freeAt(x,z,7)||onPitch(x,z,12)||nearRail(x,z,12))continue;
     const wheat=g%2===0;
     let n=0;
     for(let i=0;i<6;i++)for(let j=0;j<4;j++){
@@ -561,6 +750,7 @@ export function initStromyKvetiny() {
   if(rock.length)game.instanced(sg,game.white,rock,true);
   if(crop.length)game.instanced(sg,game.white,crop,true);
   bind(game,'meadow',()=>meadow);
+  bind(game,'forests',()=>forests);
 }
 
 
@@ -640,7 +830,7 @@ api.tick=tickAmbient;
 
 export function initTownTick() {
 /* Garáže, psi a býk v čase */
-function tickTown(dt){  const vh=game.veh();
+function tickTown(dt){ if(game.tickTrain)game.tickTrain(dt); const vh=game.veh();
   game.garages.forEach(h=>{
     if(h.stock<3){h.timer+=dt;if(h.timer>30){h.timer=0;h.stock++}}
     h.evos.forEach((e,i)=>{e.visible=i<h.stock;e.rotation.y+=dt*1.5;e.position.y=game.gy(h.x,h.z)+2.9});
@@ -650,17 +840,90 @@ function tickTown(dt){  const vh=game.veh();
   for(const g of game.guards){
     const gp=g.m.position,dP=Math.hypot(game.pv.x-gp.x,game.pv.z-gp.z),dH=Math.hypot(gp.x-g.hx,gp.z-g.hz);
     if(g.frozen>0){g.frozen-=dt;if(g.frozen<=0)g.m.userData.ice.visible=false;continue}
+    const pen=g.pen;
+    let inPen=true;
+    if(pen){
+      inPen=game.pv.x>pen.x0&&game.pv.x<pen.x1&&game.pv.z>pen.z0&&game.pv.z<pen.z1;
+      g.wT-=dt;
+      if(g.wT<=0){g.hx=game.rnd(pen.x0+2.6,pen.x1-2.6);g.hz=game.rnd(pen.z0+2.6,pen.z1-2.6);g.wT=game.rnd(2.2,5.5)}
+    }
     const sight=g.sight*(1+0.45*nightK),spd=g.spd*(1+0.12*nightK);
     let tx=null,tz=null,sp=spd;
-    if(vh&&vh.dogsFear&&dP<9){tx=gp.x-(game.pv.x-gp.x);tz=gp.z-(game.pv.z-gp.z);sp=spd*0.8}
-    else if(dP<sight&&dH<g.leash&&game.immune<=0){tx=game.pv.x;tz=game.pv.z}
-    else if(dH>3){tx=g.hx;tz=g.hz;sp=spd*0.6}
+    if(inPen&&vh&&vh.dogsFear&&dP<9){tx=gp.x-(game.pv.x-gp.x);tz=gp.z-(game.pv.z-gp.z);sp=spd*0.8}
+    else if(inPen&&dP<sight&&dH<g.leash&&game.immune<=0){tx=game.pv.x;tz=game.pv.z}
+    else if(dH>(pen?1.6:3)){tx=g.hx;tz=g.hz;sp=spd*(pen?0.45:0.6)}
     if(tx!==null){
       const ax=tx-gp.x,az=tz-gp.z,ad=Math.hypot(ax,az);
       if(ad>0.3){gp.x+=ax/ad*sp*dt;gp.z+=az/ad*sp*dt;g.m.rotation.y=Math.atan2(ax,az)-Math.PI/2}
-      gp.y=game.gy(gp.x,gp.z)+Math.abs(Math.sin(game.time*14))*0.25;
+      gp.y=game.gy(gp.x,gp.z)+Math.abs(Math.sin(game.time*14+gp.x))*0.2;
     }else gp.y=game.gy(gp.x,gp.z);
-    if(dP<1.5+(vh?vh.rad:0)&&game.pv.y<1.2&&game.immune<=0&&!(vh&&vh.dogsFear)){game.caughtBy(g);break}
+    if(pen){gp.x=game.clamp(gp.x,pen.x0+1.8,pen.x1-1.8);gp.z=game.clamp(gp.z,pen.z0+1.8,pen.z1-1.8);gp.y=game.gy(gp.x,gp.z)}
+    if(inPen&&dP<1.5+(vh?vh.rad:0)&&game.pv.y<1.2&&game.immune<=0&&!(vh&&vh.dogsFear)){game.caughtBy(g);break}
+  }
+  tickDeer(dt);
+}
+const deer={list:[],next:3,told:0};
+const DEER_KIND=['srnka','srnka','srnka','srnec','srnec','muflon'];
+function makeDeer(kind,x,z){
+  const g=new THREE.Group();
+  const col=kind==='muflon'?0x6b3a22:kind==='srnec'?0xc4894a:0xe2c08a;
+  game.box(1.25,0.55,0.45,col,0,0.72,0,g);
+  game.box(0.4,0.34,0.34,col,0.7,1.0,0,g);
+  game.box(0.12,0.16,0.1,0x222222,0.92,1.08,0.1,g);game.box(0.12,0.16,0.1,0x222222,0.92,1.08,-0.1,g);
+  [[-0.32,0.16],[0.32,0.16],[-0.32,-0.16],[0.32,-0.16]].forEach(([a,b])=>game.box(0.1,0.58,0.1,0x5a3820,a,0,b,g));
+  if(kind==='srnec'){
+    game.box(0.08,0.42,0.08,0x4a3018,0.78,1.35,0.12,g);game.box(0.08,0.42,0.08,0x4a3018,0.78,1.35,-0.12,g);
+    game.box(0.28,0.08,0.08,0x4a3018,0.9,1.52,0.12,g);game.box(0.28,0.08,0.08,0x4a3018,0.9,1.52,-0.12,g);
+  }else if(kind==='muflon'){
+    const h1=game.box(0.1,0.5,0.1,0x3a2814,0.78,1.15,0.18,g);h1.rotation.z=-1.1;h1.rotation.y=0.5;
+    const h2=game.box(0.1,0.5,0.1,0x3a2814,0.78,1.15,-0.18,g);h2.rotation.z=-1.1;h2.rotation.y=-0.5;
+  }
+  g.position.set(x,game.gy(x,z),z);g.scale.setScalar(kind==='srnka'?0.82:kind==='muflon'?1.15:1);game.shadowOn(g);game.scene.add(g);return g;
+}
+function spawnDeer(){
+  const near=(game.forests||[]).filter(f=>Math.hypot(f.x-game.pv.x,f.z-game.pv.z)<110);
+  if(!near.length)return;
+  const f=near[(Math.random()*near.length)|0],kind=DEER_KIND[(Math.random()*DEER_KIND.length)|0];
+  for(let t=0;t<14;t++){
+    const a=game.rnd(0,6.28),rad=f.r+game.rnd(3.2,9),x=f.x+Math.cos(a)*rad,z=f.z+Math.sin(a)*rad;
+    if(x<game.RX0+4||x>game.RX1-4||z<game.RZ0+4||z>game.RZ1-4||!game.freeAt(x,z,1.1))continue;
+    deer.list.push({g:makeDeer(kind,x,z),kind,home:f,x,z,hx:x,hz:z,life:game.rnd(28,60),t:game.rnd(0.6,2.4),flee:kind==='srnec'?22:kind==='muflon'?19:20});
+    return;
+  }
+}
+function tickDeer(dt){
+  if(!game.started||!game.forests)return;
+  deer.next-=dt;deer.told=Math.max(0,deer.told-dt);
+  if(deer.next<=0){deer.next=game.rnd(6,13);if(deer.list.length<8)spawnDeer()}
+  for(let i=deer.list.length-1;i>=0;i--){
+    const d=deer.list[i];
+    d.life-=dt;
+    const dist=Math.hypot(d.x-game.pv.x,d.z-game.pv.z);
+    if(d.life<=0||dist>150){game.scene.remove(d.g);deer.list.splice(i,1);continue}
+    let ax,az,sp;
+    if(dist<24){
+      ax=d.x-game.pv.x;az=d.z-game.pv.z;sp=d.flee;
+      const ox=d.x-d.home.x,oz=d.z-d.home.z,od=Math.hypot(ox,oz)||1;
+      if(od<d.home.r+3){ax+=ox/od*12;az+=oz/od*12}
+      if(dist<3.2){d.x+=ax/(Math.hypot(ax,az)||1)*7;d.z+=az/(Math.hypot(ax,az)||1)*7}
+      if(deer.told<=0&&dist<8){
+        deer.told=5;
+        const msg=d.kind==='srnka'?'Srnka je moc rychlá, tu nechytíš!':d.kind==='srnec'?'Srnec utekl, je moc rychlý!':'Muflona nechytíš, je moc rychlý!';
+        game.toast(msg,'#f0d0a0',2.4);
+      }
+    }else{
+      d.t-=dt;
+      if(d.t<=0){
+        const a=game.rnd(0,6.28),rad=d.home.r+game.rnd(3,8);
+        d.hx=d.home.x+Math.cos(a)*rad;d.hz=d.home.z+Math.sin(a)*rad;d.t=game.rnd(1.4,3.2);
+      }
+      ax=d.hx-d.x;az=d.hz-d.z;sp=2.4;
+    }
+    const ad=Math.hypot(ax,az)||1,p={x:d.x+ax/ad*sp*dt,z:d.z+az/ad*sp*dt};
+    game.resolve(p,0.35);
+    d.x=game.clamp(p.x,game.RX0+3,game.RX1-3);d.z=game.clamp(p.z,game.RZ0+3,game.RZ1-3);
+    d.g.position.set(d.x,game.gy(d.x,d.z)+Math.abs(Math.sin(game.time*(dist<24?16:8)+d.x))*0.1,d.z);
+    if(ad>0.2)d.g.rotation.y=Math.atan2(ax,az)-Math.PI/2;
   }
 }
 api.tickTown=tickTown;

@@ -6,8 +6,8 @@ export const api = {};
 export function initKolize() {
 /* Kolize */
 const obs=[];
-function addBoxObs(x,z,w,d,a=0){obs.push({x,z,hw:w/2,hd:d/2,a,c:Math.cos(a),s:Math.sin(a),R:Math.hypot(w,d)/2+2})}
-const addCircObs=(x,z,r)=>obs.push({x,z,r,R:r+2});
+function addBoxObs(x,z,w,d,a=0){const o={x,z,hw:w/2,hd:d/2,a,c:Math.cos(a),s:Math.sin(a),R:Math.hypot(w,d)/2+2};obs.push(o);return o}
+const addCircObs=(x,z,r)=>{const o={x,z,r,R:r+2};obs.push(o);return o};
 function insideRing(x,z,ring){
   let c=false;
   for(let i=0,j=ring.length-1;i<ring.length;j=i++){

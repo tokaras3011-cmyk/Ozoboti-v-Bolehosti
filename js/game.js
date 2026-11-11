@@ -106,10 +106,13 @@ function spawnQuestRobots(){
     bm.position.y=7;r.g.add(bm);questRobots.push(r);
   });
 }
-function ensureMissions(){
+function ensureMissions(fromStart){
   if(game.X.inRound())return;
   const d=todayKey();
-  if(game.S.day!==d||!game.S.missions.length){game.S.day=d;game.S.missions=genMissions();spawnQuestRobots();game.save();if(game.started)game.toast('Nové denní mise! (Q = přehled)','#ffe94a')}
+  const none=!game.S.missions.length;
+  const newDay=!!game.S.day&&game.S.day!==d;
+  const done=game.S.missions.length>0&&game.S.missions.every(m=>m.done);
+  if(none||(fromStart&&newDay&&done)){game.S.day=d;game.S.missions=genMissions();spawnQuestRobots();game.save();if(game.started)game.toast('Nové denní mise! (Q = přehled)','#ffe94a')}
   else if(!questRobots.length)spawnQuestRobots();
 }
 function mEvent(type,a={}){
@@ -138,33 +141,50 @@ function mEvent(type,a={}){
   });
   if(changed){game.refreshHud();checkBadges()}
 }
+const TIERS=[
+  {id:'easy',n:'Lehké',col:'#2f9a45'},
+  {id:'mid',n:'Středně těžké',col:'#1a7ad4'},
+  {id:'rare',n:'Vzácné',col:'#7a3ad4'},
+  {id:'ultra',n:'Ultravzácné',col:'#e07a12'},
+  {id:'legend',n:'Legendární',col:'#c9a227'}
+];
 const BADGES=[
-  {id:'first',n:'První Ozobot',d:'Chyť prvního Ozobota',t:()=>game.S.caught>=1},
-  {id:'c10',n:'Začátečník',d:'10 chycených',t:()=>game.S.caught>=10},
-  {id:'c50',n:'Lovec',d:'50 chycených',t:()=>game.S.caught>=50},
-  {id:'c100',n:'Mistr lovu',d:'100 chycených',t:()=>game.S.caught>=100},
-  {id:'c250',n:'Legenda',d:'250 chycených',t:()=>game.S.caught>=250},
-  {id:'all',n:'Celá duha',d:'Chyť všech 7 druhů',t:()=>game.ROBO.every(r=>game.S.album[r.id]>0)},
-  {id:'night',n:'Noční lovec',d:'10 Ozobotů v noci',t:()=>game.S.stats.night>=10},
-  {id:'rain',n:'I v dešti',d:'5 Ozobotů za deště',t:()=>game.S.stats.rain>=5},
-  {id:'rider',n:'Řidič',d:'Vyzkoušej všechna 4 vozidla',t:()=>game.VEH.every(v=>game.S.ridden[v.id])},
-  {id:'rich',n:'Boháč',d:'Vydělej celkem ⚡10 000',t:()=>game.S.stats.earned>=10000},
-  {id:'mis',n:'Plnič misí',d:'Splň 10 misí',t:()=>game.S.stats.missions>=10},
-  {id:'dog',n:'Psí kamarád',d:'Zmraz psa 5×',t:()=>game.S.stats.freeze>=5},
-  {id:'trap',n:'Lovec s pastí',d:'10 Ozobotů z pasti',t:()=>game.S.stats.trap>=10},
-  {id:'sprint',n:'Sprinter',d:'Sprintuj celkem 60 s',t:()=>game.S.stats.sprint>=60},
-  {id:'thief',n:'Garážový zloděj',d:'Ukradni 5× robota Evo',t:()=>game.S.stats.steal>=5},
-  {id:'build',n:'Konstruktér',d:'Sestav 5 robotů v dílně',t:()=>game.S.built>=5}
+  {id:'first',n:'První Ozobot',d:'Chyť prvního Ozobota',tier:'easy',t:()=>game.S.caught>=1},
+  {id:'c10',n:'Začátečník',d:'10 chycených',tier:'easy',t:()=>game.S.caught>=10},
+  {id:'sprint',n:'Sprinter',d:'Sprintuj celkem 60 s',tier:'easy',t:()=>game.S.stats.sprint>=60},
+  {id:'rain',n:'I v dešti',d:'5 Ozobotů za deště',tier:'easy',t:()=>game.S.stats.rain>=5},
+  {id:'dog',n:'Psí kamarád',d:'Zmraz psa 5×',tier:'mid',t:()=>game.S.stats.freeze>=5},
+  {id:'c50',n:'Lovec',d:'50 chycených',tier:'mid',t:()=>game.S.caught>=50},
+  {id:'mis',n:'Plnič misí',d:'Splň 10 misí',tier:'mid',t:()=>game.S.stats.missions>=10},
+  {id:'trap',n:'Lovec s pastí',d:'10 Ozobotů z pasti',tier:'mid',t:()=>game.S.stats.trap>=10},
+  {id:'build',n:'Konstruktér',d:'Sestav 5 robotů v dílně',tier:'mid',t:()=>game.S.built>=5},
+  {id:'night',n:'Noční lovec',d:'10 Ozobotů v noci',tier:'rare',t:()=>game.S.stats.night>=10},
+  {id:'c100',n:'Mistr lovu',d:'100 chycených',tier:'rare',t:()=>game.S.caught>=100},
+  {id:'thief',n:'Garážový zloděj',d:'Ukradni 5× robota Evo',tier:'rare',t:()=>game.S.stats.steal>=5},
+  {id:'rider',n:'Řidič',d:'Vyzkoušej všechna vozidla',tier:'ultra',t:()=>game.VEH.every(v=>game.S.ridden[v.id])},
+  {id:'all',n:'Celá duha',d:'Chyť všech 7 druhů',tier:'ultra',t:()=>game.ROBO.every(r=>game.S.album[r.id]>0)},
+  {id:'rich',n:'Boháč',d:'Vydělej celkem ⚡10 000',tier:'ultra',t:()=>game.S.stats.earned>=10000},
+  {id:'c250',n:'Legenda',d:'250 chycených',tier:'legend',t:()=>game.S.caught>=250}
 ];
 function checkBadges(){
-  BADGES.forEach(b=>{if(!game.S.badges[b.id]&&b.t()){game.S.badges[b.id]=1;game.sfx.badge();game.toast('🏅 Odznak: '+b.n,'#ffe94a')}});
+  BADGES.forEach(b=>{if(!game.S.badges[b.id]&&b.t()){game.S.badges[b.id]=1;game.sfx.badge();const tier=TIERS.find(t=>t.id===b.tier)||TIERS[0];game.toast('🏅 '+tier.n+': '+b.n,tier.col)}});
+}
+function badgesHtml(){
+  const got=Object.keys(game.S.badges).length;
+  let h='<h3>Odznaky ('+got+' / '+BADGES.length+')</h3>';
+  TIERS.forEach(t=>{
+    const list=BADGES.filter(b=>b.tier===t.id);if(!list.length)return;
+    const n=list.filter(b=>game.S.badges[b.id]).length;
+    h+='<h4 class="tierh t-'+t.id+'">'+t.n+' ('+n+' / '+list.length+')</h4>'+list.map(b=>'<span class="badge t-'+b.tier+(game.S.badges[b.id]?' got':'')+'">'+(game.S.badges[b.id]?'🏅 ':'🔒 ')+b.n+' <small>– '+b.d+'</small></span>').join('');
+  });
+  return h;
 }
 function albumModal(){
   game.openModal('📖 Album, mise a odznaky',el=>{
     el.innerHTML='<h3>Denní mise ('+game.S.day+') – ⭐ '+game.S.stars+'</h3>'+game.S.missions.map(m=>'<div class="row"><div><b'+(m.done?' style="color:#1a9a4a"':'')+'>'+(m.done?'✅ ':'')+missionText(m)+'</b><small>Odměna: ⚡'+m.reward+' + ⭐</small><div class="prog"><i style="width:'+Math.min(100,m.p/m.n*100)+'%"></i></div></div><div>'+Math.floor(m.p)+' / '+m.n+'</div></div>').join('')
       +'<h3>Album Ozobotů</h3><div class="dex">'+game.ROBO.map(r=>{const n=game.S.album[r.id]||0;const col='#'+r.c.toString(16).padStart(6,'0');
         return '<div class="dexc'+(n?'':' no')+'"><span class="led" style="background:'+(r.rainbow?'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)':col)+';color:'+col+'"></span><b>'+(n?r.n:'???')+'</b><br>chyceno: '+n+'<br><small>'+(n?r.hint:'Ještě jsi ho nechytil.')+'</small></div>'}).join('')+'</div>'
-      +'<h3>Odznaky ('+Object.keys(game.S.badges).length+' / '+BADGES.length+')</h3>'+BADGES.map(b=>'<span class="badge'+(game.S.badges[b.id]?' got':'')+'" title="'+b.d+'">'+(game.S.badges[b.id]?'🏅 ':'🔒 ')+b.n+' <small>– '+b.d+'</small></span>').join('')+game.X.albumHtml();
+      +badgesHtml()+game.X.albumHtml();
   },false);
 }
 
@@ -183,13 +203,14 @@ function albumModal(){
 
 export function initInterakce() {
 /* Interakce */
+function sellAt(x,z){
+  if(!game.carry.length){game.toast('Nemáš co prodat – nachytej Ozoboty!');return}
+  const v=Math.round(game.carry.reduce((a,t)=>a+game.ROB[t.id].v*t.m,0)*game.mult());
+  game.S.money+=v;game.S.stats.earned+=v;game.toast('+⚡'+game.fmt(v),'#7dffb0');game.sfx.sell();game.burst(x,game.gy(x,z)+3,z,0xffe94a,20);
+  game.carry=[];game.refreshCarry();game.refreshHud();game.mEvent('sell',{v});game.checkBadges();game.save();
+}
 const interact=[
-  {x:game.SELL.x,z:game.SELL.z+2.4,r:4.2,text:()=>game.carry.length?'E – Prodat Ozoboty ('+game.carry.length+')':'E – Výkup (nemáš žádné Ozoboty)',act:()=>{
-    if(!game.carry.length){game.toast('Nemáš co prodat – nachytej Ozoboty!');return}
-    const v=Math.round(game.carry.reduce((a,t)=>a+game.ROB[t.id].v*t.m,0)*game.mult());
-    game.S.money+=v;game.S.stats.earned+=v;game.toast('+⚡'+game.fmt(v),'#7dffb0');game.sfx.sell();game.burst(game.SELL.x,game.gy(game.SELL.x,game.SELL.z)+3,game.SELL.z+1.5,0xffe94a,20);
-    game.carry=[];game.refreshCarry();game.refreshHud();game.mEvent('sell',{v});game.checkBadges();game.save();
-  }},
+  {x:game.SELL.x,z:game.SELL.z+2.4,r:4.2,text:()=>game.carry.length?'E – Prodat Ozoboty ('+game.carry.length+')':'E – Výkup (nemáš žádné Ozoboty)',act:()=>sellAt(game.SELL.x,game.SELL.z+1.5)},
   {x:game.SHOP.x,z:game.SHOP.z+2.4,r:4.2,text:()=>'E – Obchod',act:game.shopModal},
   {x:game.HATCH.x,z:game.HATCH.z+3.6,r:4.2,text:()=>'E – Dílna',act:game.hatchModal}
 ];
@@ -205,6 +226,7 @@ let nearest=null;
 
 
   bind(game, "interact", () => interact);
+  bind(game, "sellAt", () => sellAt);
   bindLet(game, "nearest", () => nearest, (v) => { nearest = v; });
 }
 

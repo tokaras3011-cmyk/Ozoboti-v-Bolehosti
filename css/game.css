@@ -9,8 +9,8 @@
   #missions{left:18px;top:118px;font-size:14px;line-height:1.35;max-width:290px;background:#0a1a3a88;padding:6px 10px;border-radius:10px;font-weight:700}
   #missions .done{color:#7dffb0;text-decoration:line-through}
   #clock{left:50%;top:10px;transform:translateX(-50%);font-size:20px;text-align:center}
-  #compass{left:50%;top:44px;transform:translateX(-50%);font-size:15px;text-align:center;display:none}
-  #compass span{display:inline-block;font-size:26px;color:#ff9ad8}
+  #compass{left:50%;top:44px;transform:translateX(-50%);font-size:15px;display:none;align-items:center;gap:20px;white-space:nowrap}
+  #compass span{display:block;width:34px;height:34px;line-height:34px;font-size:26px;color:#ff9ad8;text-align:center;flex:none}
   #prompt{left:50%;bottom:118px;transform:translateX(-50%);font-size:26px;background:#0009;padding:8px 22px;border-radius:12px;display:none;white-space:nowrap}
   #toast{left:50%;top:92px;transform:translateX(-50%);font-size:26px;opacity:0;transition:opacity .3s;text-align:center;width:80%}
   #help{position:fixed;right:16px;bottom:12px;z-index:40;width:52px;height:52px;padding:0;border-radius:50%;border:2px solid #fff;background:#0a1a3acc;box-shadow:0 2px 10px #0008;display:flex;align-items:center;justify-content:center}
@@ -61,8 +61,13 @@
   .dexc{border:2px solid #dde5f0;border-radius:12px;padding:8px;font-size:13px;background:#f6f9fd}
   .dexc.no{opacity:.5}
   .led{display:inline-block;width:16px;height:16px;border-radius:50%;vertical-align:middle;margin-right:6px;box-shadow:0 0 8px currentColor}
-  .badge{display:inline-block;border-radius:10px;padding:4px 10px;margin:3px 4px 3px 0;font-size:13px;font-weight:700;background:#eef1f5;color:#8a95a5}
-  .badge.got{background:#fff3c4;color:#6a4a00}
+  .badge{display:inline-block;border-radius:10px;padding:4px 10px;margin:3px 4px 3px 0;font-size:13px;font-weight:700;background:#eef1f5;color:#8a95a5;border:2px solid transparent}
+  .tierh{margin:12px 0 4px;font-size:15px}
+  .tierh.t-easy{color:#1a7a32}.badge.t-easy.got{background:#e5f6e8;color:#145c28;border-color:#3aaa55}
+  .tierh.t-mid{color:#0d5eae}.badge.t-mid.got{background:#e5f1fc;color:#0a4a8a;border-color:#1a7ad4}
+  .tierh.t-rare{color:#6428b0}.badge.t-rare.got{background:#f3e8ff;color:#4e2088;border-color:#7a3ad4}
+  .tierh.t-ultra{color:#b85e00}.badge.t-ultra.got{background:#fff1dc;color:#8a4200;border-color:#e07a12}
+  .tierh.t-legend{color:#8a6a00}.badge.t-legend.got{background:linear-gradient(90deg,#fff6c8,#ffe08a);color:#6a4a00;border-color:#e0b020;box-shadow:0 0 8px #e0b02088}
   .prog{height:8px;background:#e3e9f2;border-radius:6px;overflow:hidden;margin-top:4px}
   .prog i{display:block;height:100%;background:#36c86a}
   #bigmap{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:50;cursor:zoom-out}

@@ -71,12 +71,12 @@ function addRobot(opts={}){
 }
 /* Pomocníci z dílny */
 const HELP=[
-  {n:'Ozobot Bit',inc:0.6,c:0x2a7bff,w:48},
-  {n:'Ozobot Evo',inc:1.8,c:0xff7ac8,w:28},
-  {n:'Robo-pes',inc:5,c:0x9aa7b5,w:14},
-  {n:'Robo-pavouk',inc:14,c:0x5a4a7a,w:7},
-  {n:'Dron',inc:45,c:0x22b8c8,w:2.6},
-  {n:'Zlatý robot',inc:160,c:0xffc400,w:0.4}
+  {n:'Ozobot Bit',inc:0.6,c:0x2a7bff,w:20},
+  {n:'Ozobot Evo',inc:1.8,c:0xff7ac8,w:14},
+  {n:'Robo-pes',inc:5,c:0x9aa7b5,w:28},
+  {n:'Robo-pavouk',inc:14,c:0x5a4a7a,w:26},
+  {n:'Dron',inc:45,c:0x22b8c8,w:10},
+  {n:'Zlatý robot',inc:160,c:0xffc400,w:2}
 ];
 function makeHelper(i){
   const p=HELP[i],g=new THREE.Group();

@@ -3,13 +3,13 @@ import { MAP } from '../mapdata.js';
 import { BUDOVY } from '../map-budovy.js';
 import { OKOLI_R, OKOLI_LM } from '../map-okoli.js';
 import { game, bind, bindLet } from './context.js';
-import { initTerenSkutecneVyskyLegoStyl, initOblohaHoryMrakyHvezdy, initStavbyPomocne, initBolehostPodleMapyOpenstreetmap, initGarazeSouseduPsiByk, initDomov, initStromyKvetiny, initDenNocAPocasi, initTownTick, api as world } from './world.js';
-import { initPostavy, initHracAVozidla, initVstup, initPlayerMotion, api as player } from './player.js?v=5';
-import { initOzoboti, initRobotAi, initSvetOzoboti, api as robots } from './robots.js';
-import { initKolize, api as collision } from './collision.js';
-import { initMinimapa, initVelkaMapaKlikNaMinimapuNeboKlavesaN, initHud, initModalniOkna, initUvodniObrazovka, api as hud } from './hud.js?v=5';
-import { initStavHryUkladani, initMiseAlbumOdznaky, initInterakce, initPosilovace, api as state } from './game.js';
-import { initExtras, api as extras } from './extras.js?v=5';
+import { initTerenSkutecneVyskyLegoStyl, initOblohaHoryMrakyHvezdy, initStavbyPomocne, initBolehostPodleMapyOpenstreetmap, initGarazeSouseduPsiByk, initDomov, initStromyKvetiny, initDenNocAPocasi, initTownTick, api as world } from './world.js?v=15';
+import { initPostavy, initHracAVozidla, initVstup, initPlayerMotion, api as player } from './player.js?v=9';
+import { initOzoboti, initRobotAi, initSvetOzoboti, api as robots } from './robots.js?v=6';
+import { initKolize, api as collision } from './collision.js?v=2';
+import { initMinimapa, initVelkaMapaKlikNaMinimapuNeboKlavesaN, initHud, initModalniOkna, initUvodniObrazovka, api as hud } from './hud.js?v=14';
+import { initStavHryUkladani, initMiseAlbumOdznaky, initInterakce, initPosilovace, api as state } from './game.js?v=8';
+import { initExtras, api as extras } from './extras.js?v=10';
 import { initRound, api as round } from './round.js?v=4';
 import { initPresence, api as presence } from './presence.js?v=4';
 
@@ -97,7 +97,6 @@ function startLoop(){
       if(hudT>0.25){
         hudT=0; game.refreshHud();
         if(game.modalOpen&&game.modalRender&&game.modalLive) game.modalRender();
-        if(game.todayKey()!==game.S.day) game.ensureMissions();
       }
       slow+=dt; if(slow>10){slow=0; game.save();}
       hud.tick(dt);
