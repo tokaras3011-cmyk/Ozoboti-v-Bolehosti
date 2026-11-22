@@ -345,7 +345,7 @@ function buildSwatches(){
 }
 function buildBoard(){
   const ix=Object.values(game.getIndex()).sort((a,b)=>b.caught-a.caught);
-  game.$('board').innerHTML=ix.length?ix.slice(0,5).map((p,i)=>(i+1)+'. '+p.name.replace(/</g,'&lt;')+' – '+p.caught).join('<br>'):'<i>zatím nikdo – buď první!</i>';
+  if(game.hallPaintStart)game.hallPaintStart();
   game.$('recent').innerHTML=ix.length?'<small>Už hrál(a):</small><br>'+ix.slice(0,8).map(p=>'<span class="chip" data-n="'+p.name.replace(/"/g,'')+'">'+p.name.replace(/</g,'&lt;')+'</span>').join(''):'';
   [...game.$('recent').querySelectorAll('.chip')].forEach(c=>c.onclick=()=>{
     const p=game.getIndex()[game.keyOf(c.dataset.n)];game.$('name').value=c.dataset.n;
@@ -358,6 +358,7 @@ game.$('name').addEventListener('keydown',e=>{if(e.key==='Enter'&&game.$('name')
 game.$('go').onclick=()=>{
   const name=game.$('name').value.trim().slice(0,14);if(!name)return;
   game.S=game.loadState(name);game.S.name=name;game.S.char=game.CHARS[selChar].id;game.S.color=game.COLORS[selColor];
+  if(game.hallJoin)game.hallJoin(name);
   if(name.toLowerCase()==='roboto'){
     const s=game.S;
     s.money=999999;

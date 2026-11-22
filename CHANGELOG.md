@@ -1,6 +1,12 @@
 # Změny
 
-Verze jdou od nejnovější. Číslo verze odpovídá tomu, jak hra postupně přibývala v commitech. Verze 7 je současný stav hry.
+Verze jdou od nejnovější. Číslo verze odpovídá tomu, jak hra postupně přibývala v commitech. Verze 8 je současný stav hry.
+
+## Verze 8 — 22. 11. 2026
+
+- Síň slávy drží měsíční statistiky podle jména: chycení Ozoboti, získaná energie, splněné mise, navštívená místa a odehraný čas.
+- Vpravo jsou pořád vidět tři nejlepší podle chycených. Kliknutí na Síň slávy vypíše všechny hráče.
+- Učitel může hráče ze síně smazat nebo přejmenovat.
 
 ## Verze 7 — 21. 11. 2026
 

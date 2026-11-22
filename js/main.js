@@ -4,14 +4,15 @@ import { BUDOVY } from '../map-budovy.js';
 import { OKOLI_R, OKOLI_LM } from '../map-okoli.js';
 import { game, bind, bindLet } from './context.js';
 import { initTerenSkutecneVyskyLegoStyl, initOblohaHoryMrakyHvezdy, initStavbyPomocne, initBolehostPodleMapyOpenstreetmap, initGarazeSouseduPsiByk, initDomov, initStromyKvetiny, initDenNocAPocasi, initTownTick, api as world } from './world.js?v=22';
-import { initPostavy, initHracAVozidla, initVstup, initPlayerMotion, api as player } from './player.js?v=15';
-import { initOzoboti, initRobotAi, initSvetOzoboti, api as robots } from './robots.js?v=20';
+import { initPostavy, initHracAVozidla, initVstup, initPlayerMotion, api as player } from './player.js?v=16';
+import { initOzoboti, initRobotAi, initSvetOzoboti, api as robots } from './robots.js?v=21';
 import { initKolize, api as collision } from './collision.js?v=2';
-import { initMinimapa, initVelkaMapaKlikNaMinimapuNeboKlavesaN, initHud, initModalniOkna, initUvodniObrazovka, api as hud } from './hud.js?v=21';
-import { initStavHryUkladani, initMiseAlbumOdznaky, initInterakce, initPosilovace, api as state } from './game.js?v=12';
-import { initExtras, api as extras } from './extras.js?v=18';
+import { initMinimapa, initVelkaMapaKlikNaMinimapuNeboKlavesaN, initHud, initModalniOkna, initUvodniObrazovka, api as hud } from './hud.js?v=22';
+import { initStavHryUkladani, initMiseAlbumOdznaky, initInterakce, initPosilovace, api as state } from './game.js?v=13';
+import { initExtras, api as extras } from './extras.js?v=19';
 import { initRound, api as round } from './round.js?v=4';
 import { initPresence, api as presence } from './presence.js?v=5';
+import { initHall, api as hall } from './hall.js?v=1';
 
 MAP.B.splice(0, MAP.B.length, ...BUDOVY);
 MAP.R.push(...OKOLI_R);
@@ -82,7 +83,7 @@ function startLoop(){
         player.tickPets(dt);
         hud.tickPrompt(dt);
       }
-      const inc=game.income(); if(inc>0) game.S.money+=inc*dt;
+      const inc=game.income(); if(inc>0){game.S.money+=inc*dt; if(!(game.inRound&&game.inRound())&&game.hallEnergy) game.hallEnergy(inc*dt)}
       if(game.hatch&&game.hatch.t>0) game.hatch.t=Math.max(0, game.hatch.t-dt);
       game.workRobot.g.visible=!!game.hatch;
       if(game.hatch){
@@ -107,6 +108,7 @@ function startLoop(){
     }
     extras.tick(dt);
     round.tick(dt);
+    hall.tick(dt);
     game.sun.target.position.set(tx,ty,tz);
     game.sun.position.set(tx+game.lightDir.x, ty+game.lightDir.y, tz+game.lightDir.z);
     game.renderer.render(game.scene, game.camera);
@@ -143,6 +145,7 @@ function startLoop(){
   initExtras();
   initRound();
   initPresence();
+  initHall();
   initUvodniObrazovka();
   initSvetOzoboti();
   startLoop();

@@ -9,3 +9,4 @@ vysledky*.json
 config.local.php
 data/state.json
 data/presence.json
+data/hall.json

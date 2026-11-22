@@ -8,6 +8,8 @@ declare(strict_types=1);
  * Endpointy (přes .htaccess / router.php):
  *   GET  /ozoboti/api/state
  *   POST /ozoboti/api/score
+ *   GET  /ozoboti/api/hall
+ *   POST /ozoboti/api/hall
  *   POST /ozoboti/api/teacher
  *   POST /ozoboti/api/presence
  */
@@ -17,6 +19,14 @@ header('Cache-Control: no-store');
 
 const STATE_FILE = __DIR__ . '/data/state.json';
 const PRESENCE_FILE = __DIR__ . '/data/presence.json';
+const HALL_FILE = __DIR__ . '/data/hall.json';
+const HALL_CAP_CAUGHT = 20;
+const HALL_CAP_ENERGY = 50_000;
+const HALL_CAP_MISSIONS = 10;
+const HALL_CAP_PLACES = 15;
+const HALL_CAP_SECONDS = 120;
+const HALL_MAX_PLACES = 80;
+const HALL_MAX_TOTAL = 2_000_000_000;
 const PLAYER_STALE_MS = 60_000;
 const PRESENCE_KEEP_MS = 60_000;
 const PRESENCE_AWAY_MS = 2_000;
@@ -30,7 +40,7 @@ const CHAR_IDS = ['kuba', 'bara', 'sportak', 'robot', 'dino', 'kocka', 'astro', 
 $action = (string) ($_GET['action'] ?? '');
 if ($action === '') {
     $uri = (string) (parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '');
-    if (preg_match('#/api/(state|score|teacher|presence)/?$#', $uri, $m)) {
+    if (preg_match('#/api/(state|score|teacher|presence|hall)/?$#', $uri, $m)) {
         $action = $m[1];
     }
 }
@@ -43,6 +53,12 @@ try {
     }
     if ($action === 'score' && $method === 'POST') {
         json_out(handle_score(read_json_body()));
+    }
+    if ($action === 'hall' && $method === 'GET') {
+        json_out(handle_hall_get());
+    }
+    if ($action === 'hall' && $method === 'POST') {
+        json_out(handle_hall_post(read_json_body()));
     }
     if ($action === 'teacher' && $method === 'POST') {
         json_out(handle_teacher(read_json_body()));
@@ -280,6 +296,412 @@ function handle_score(array $body): array
     });
 }
 
+function default_hall(): array
+{
+    return ['months' => [], 'aliases' => []];
+}
+
+/**
+ * @template T
+ * @param callable(array): T $fn
+ * @return T
+ */
+function with_hall(bool $exclusive, callable $fn): mixed
+{
+    $dir = dirname(HALL_FILE);
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new RuntimeException('Nelze vytvořit data/.');
+    }
+
+    $fh = fopen(HALL_FILE, 'c+');
+    if ($fh === false) {
+        throw new RuntimeException('Nelze otevřít hall.json.');
+    }
+
+    if (!flock($fh, $exclusive ? LOCK_EX : LOCK_SH)) {
+        fclose($fh);
+        throw new RuntimeException('Nelze zamknout hall.json.');
+    }
+
+    try {
+        rewind($fh);
+        $raw = stream_get_contents($fh);
+        $state = default_hall();
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded) && isset($decoded['months']) && is_array($decoded['months'])) {
+                $state = $decoded;
+                if (!isset($state['aliases']) || !is_array($state['aliases'])) {
+                    $state['aliases'] = [];
+                }
+            }
+        }
+
+        $result = $fn($state);
+
+        if ($exclusive) {
+            $json = json_encode($state, JSON_UNESCAPED_UNICODE);
+            if ($json === false) {
+                throw new RuntimeException('JSON encode selhal.');
+            }
+            ftruncate($fh, 0);
+            rewind($fh);
+            fwrite($fh, $json);
+            fflush($fh);
+        }
+
+        return $result;
+    } finally {
+        flock($fh, LOCK_UN);
+        fclose($fh);
+    }
+}
+
+function hall_month(): string
+{
+    return (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y-m');
+}
+
+function hall_label(string $month): string
+{
+    $names = [
+        1 => 'leden',
+        2 => 'únor',
+        3 => 'březen',
+        4 => 'duben',
+        5 => 'květen',
+        6 => 'červen',
+        7 => 'červenec',
+        8 => 'srpen',
+        9 => 'září',
+        10 => 'říjen',
+        11 => 'listopad',
+        12 => 'prosinec',
+    ];
+    if (preg_match('/^(\d{4})-(\d{2})$/', $month, $m) !== 1) {
+        return $month;
+    }
+    $n = (int) $m[2];
+
+    return ($names[$n] ?? $month) . ' ' . $m[1];
+}
+
+function hall_delta(mixed $value, int $cap): int
+{
+    if (is_string($value) && is_numeric($value)) {
+        $value = $value + 0;
+    }
+    if (!is_int($value) && !is_float($value)) {
+        return 0;
+    }
+    $n = (int) floor((float) $value);
+    if ($n < 0) {
+        return 0;
+    }
+
+    return min($cap, $n);
+}
+
+function clean_place(mixed $value): string
+{
+    $id = trim((string) $value);
+    if ($id === '' || mb_strlen($id, 'UTF-8') > 48) {
+        return '';
+    }
+    if (preg_match('/[\x00-\x1F\x7F<>]/u', $id) === 1) {
+        return '';
+    }
+    if (preg_match('/^[\p{L}\p{N} :._-]+$/u', $id) !== 1) {
+        return '';
+    }
+
+    return $id;
+}
+
+function hall_key(string $name): string
+{
+    return mb_strtolower($name, 'UTF-8');
+}
+
+/** @param array<string, mixed> $state */
+function hall_public(array $state): array
+{
+    $month = hall_month();
+    $rows = [];
+    $players = $state['months'][$month]['players'] ?? null;
+    if (is_array($players)) {
+        foreach ($players as $p) {
+            if (!is_array($p)) {
+                continue;
+            }
+            $places = isset($p['places']) && is_array($p['places']) ? count($p['places']) : 0;
+            $rows[] = [
+                'name' => (string) ($p['name'] ?? ''),
+                'caught' => (int) ($p['caught'] ?? 0),
+                'energy' => (int) ($p['energy'] ?? 0),
+                'missions' => (int) ($p['missions'] ?? 0),
+                'places' => $places,
+                'seconds' => (int) ($p['seconds'] ?? 0),
+            ];
+        }
+    }
+    usort($rows, static function (array $a, array $b): int {
+        if ($a['caught'] !== $b['caught']) {
+            return $b['caught'] <=> $a['caught'];
+        }
+
+        return strcasecmp($a['name'], $b['name']);
+    });
+
+    return [
+        'month' => $month,
+        'label' => hall_label($month),
+        'players' => $rows,
+    ];
+}
+
+/** @param array<string, string> $aliases */
+function hall_resolve(array $players, array $aliases, string $key): string
+{
+    $seen = [];
+    while (isset($aliases[$key]) && is_string($aliases[$key]) && !isset($seen[$key])) {
+        $seen[$key] = true;
+        $next = $aliases[$key];
+        if ($next === '' || $next === $key) {
+            break;
+        }
+        $key = $next;
+    }
+    if (!isset($players[$key])) {
+        return '';
+    }
+
+    return $key;
+}
+
+/** @param array<string, string> $aliases
+ *  @return list<string>
+ */
+function hall_identity_keys(array $aliases, string $key): array
+{
+    $keys = [$key => true];
+    $changed = true;
+    while ($changed) {
+        $changed = false;
+        foreach ($aliases as $from => $to) {
+            if (is_string($from) && is_string($to) && isset($keys[$to]) && !isset($keys[$from])) {
+                $keys[$from] = true;
+                $changed = true;
+            }
+        }
+    }
+
+    return array_keys($keys);
+}
+
+/** @param array<string, mixed> $state */
+function &hall_players(array &$state, string $month): array
+{
+    if (!isset($state['months']) || !is_array($state['months'])) {
+        $state['months'] = [];
+    }
+    if (!isset($state['months'][$month]) || !is_array($state['months'][$month])) {
+        $state['months'][$month] = ['players' => []];
+    }
+    if (!isset($state['months'][$month]['players']) || !is_array($state['months'][$month]['players'])) {
+        $state['months'][$month]['players'] = [];
+    }
+
+    return $state['months'][$month]['players'];
+}
+
+/** @param array<string, mixed> $current */
+function hall_blank(string $name): array
+{
+    return [
+        'name' => $name,
+        'caught' => 0,
+        'energy' => 0,
+        'missions' => 0,
+        'places' => [],
+        'seconds' => 0,
+        'batch' => '',
+        'accepted' => null,
+        'updated' => now_ms(),
+    ];
+}
+
+function handle_hall_get(): array
+{
+    return with_hall(false, static function (array &$state): array {
+        return hall_public($state);
+    });
+}
+
+function handle_hall_post(array $body): array
+{
+    $name = clean_name($body['name'] ?? '');
+    if ($name === '') {
+        json_out(['error' => 'no name'], 400);
+    }
+    $batch = (string) ($body['batch'] ?? '');
+    if (preg_match('/^[A-Za-z0-9_-]{8,40}$/', $batch) !== 1) {
+        json_out(['error' => 'batch'], 400);
+    }
+    $caught = hall_delta($body['caught'] ?? 0, HALL_CAP_CAUGHT);
+    $energy = hall_delta($body['energy'] ?? 0, HALL_CAP_ENERGY);
+    $missions = hall_delta($body['missions'] ?? 0, HALL_CAP_MISSIONS);
+    $seconds = hall_delta($body['seconds'] ?? 0, HALL_CAP_SECONDS);
+    $rawPlaces = [];
+    if (isset($body['places']) && is_array($body['places'])) {
+        foreach ($body['places'] as $id) {
+            if (!is_string($id) && !is_int($id)) {
+                continue;
+            }
+            $rawPlaces[] = (string) $id;
+            if (count($rawPlaces) >= HALL_CAP_PLACES) {
+                break;
+            }
+        }
+    }
+
+    return with_hall(true, static function (array &$state) use ($name, $batch, $caught, $energy, $missions, $seconds, $rawPlaces): array {
+        $empty = [
+            'caught' => $caught,
+            'energy' => $energy,
+            'missions' => $missions,
+            'places' => $rawPlaces,
+            'seconds' => $seconds,
+        ];
+        if (hall_key($name) === 'roboto') {
+            return ['ok' => true, 'accepted' => $empty, 'hall' => hall_public($state)];
+        }
+
+        $month = hall_month();
+        $players = &hall_players($state, $month);
+        if (!isset($state['aliases']) || !is_array($state['aliases'])) {
+            $state['aliases'] = [];
+        }
+        $posted = hall_key($name);
+        $resolved = hall_resolve($players, $state['aliases'], $posted);
+        $key = $resolved !== '' ? $resolved : $posted;
+        if (!isset($players[$key]) || !is_array($players[$key])) {
+            $players[$key] = hall_blank($name);
+        }
+        $player = &$players[$key];
+        if (!isset($player['places']) || !is_array($player['places'])) {
+            $player['places'] = [];
+        }
+
+        if ((string) ($player['batch'] ?? '') === $batch && is_array($player['accepted'] ?? null)) {
+            return ['ok' => true, 'name' => (string) $player['name'], 'accepted' => $player['accepted'], 'hall' => hall_public($state)];
+        }
+
+        $acceptedPlaces = [];
+        foreach ($rawPlaces as $raw) {
+            $acceptedPlaces[] = $raw;
+            $clean = clean_place($raw);
+            if ($clean === '') {
+                continue;
+            }
+            if (!in_array($clean, $player['places'], true) && count($player['places']) < HALL_MAX_PLACES) {
+                $player['places'][] = $clean;
+            }
+        }
+        $player['caught'] = min(HALL_MAX_TOTAL, (int) ($player['caught'] ?? 0) + $caught);
+        $player['energy'] = min(HALL_MAX_TOTAL, (int) ($player['energy'] ?? 0) + $energy);
+        $player['missions'] = min(HALL_MAX_TOTAL, (int) ($player['missions'] ?? 0) + $missions);
+        $player['seconds'] = min(HALL_MAX_TOTAL, (int) ($player['seconds'] ?? 0) + $seconds);
+        $accepted = [
+            'caught' => $caught,
+            'energy' => $energy,
+            'missions' => $missions,
+            'places' => $acceptedPlaces,
+            'seconds' => $seconds,
+        ];
+        $player['batch'] = $batch;
+        $player['accepted'] = $accepted;
+        $player['updated'] = now_ms();
+
+        return ['ok' => true, 'name' => (string) $player['name'], 'accepted' => $accepted, 'hall' => hall_public($state)];
+    });
+}
+
+function hall_admin_delete(array $body): array
+{
+    $name = clean_name($body['name'] ?? '');
+    if ($name === '') {
+        json_out(['error' => 'no name'], 400);
+    }
+    $key = hall_key($name);
+
+    return with_hall(true, static function (array &$state) use ($key): array {
+        $aliases = (isset($state['aliases']) && is_array($state['aliases'])) ? $state['aliases'] : [];
+        $keys = hall_identity_keys($aliases, $key);
+        if (isset($state['months']) && is_array($state['months'])) {
+            foreach ($state['months'] as &$bucket) {
+                if (is_array($bucket) && isset($bucket['players']) && is_array($bucket['players'])) {
+                    foreach ($keys as $drop) {
+                        unset($bucket['players'][$drop]);
+                    }
+                }
+            }
+            unset($bucket);
+        }
+        foreach ($aliases as $from => $to) {
+            if (in_array($from, $keys, true) || in_array($to, $keys, true)) {
+                unset($aliases[$from]);
+            }
+        }
+        $state['aliases'] = $aliases;
+
+        return ['ok' => true, 'hall' => hall_public($state)];
+    });
+}
+
+function hall_admin_rename(array $body): array
+{
+    $name = clean_name($body['name'] ?? '');
+    $next = clean_name($body['rename'] ?? '');
+    if ($name === '' || $next === '') {
+        json_out(['error' => 'no name'], 400);
+    }
+    if (hall_key($next) === 'roboto') {
+        json_out(['error' => 'name'], 400);
+    }
+    $key = hall_key($name);
+    $nextKey = hall_key($next);
+
+    return with_hall(true, static function (array &$state) use ($key, $next, $nextKey): array {
+        $month = hall_month();
+        $players = &hall_players($state, $month);
+        if (!isset($players[$key]) || !is_array($players[$key])) {
+            json_out(['error' => 'missing'], 404);
+        }
+        if ($nextKey !== $key && isset($players[$nextKey])) {
+            json_out(['error' => 'name-taken'], 409);
+        }
+        $rec = $players[$key];
+        unset($players[$key]);
+        $rec['name'] = $next;
+        $players[$nextKey] = $rec;
+        if ($nextKey !== $key) {
+            if (!isset($state['aliases']) || !is_array($state['aliases'])) {
+                $state['aliases'] = [];
+            }
+            foreach ($state['aliases'] as $from => $to) {
+                if ($to === $key) {
+                    $state['aliases'][$from] = $nextKey;
+                }
+            }
+            $state['aliases'][$key] = $nextKey;
+            unset($state['aliases'][$nextKey]);
+        }
+
+        return ['ok' => true, 'hall' => hall_public($state)];
+    });
+}
+
 function handle_teacher(array $body): array
 {
     if ((string) ($body['pin'] ?? '') !== teacher_pin()) {
@@ -289,6 +711,12 @@ function handle_teacher(array $body): array
     $act = (string) ($body['action'] ?? '');
     if ($act === 'auth') {
         return ['ok' => true];
+    }
+    if ($act === 'hall-delete') {
+        return hall_admin_delete($body);
+    }
+    if ($act === 'hall-rename') {
+        return hall_admin_rename($body);
     }
 
     return with_state(true, static function (array &$state) use ($body, $act): array {

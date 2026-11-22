@@ -123,7 +123,7 @@ export function initRobotAi() {
 function catchRobot(r,byTrap=false){
   const def=game.ROB[r.id],m=(game.isNight()?1.25:1)*(game.isRain()?1.15:1)*game.X.valueMult();
   game.carry.push({id:r.id,m,tier:r.tier||0});r.alive=false;r.g.visible=false;r.respawn=r.gold?45:game.rnd(14,28);
-  game.S.caught++;game.albumBump(r.id,r.tier||0);
+  game.S.caught++;if(game.hallCatch)game.hallCatch();game.albumBump(r.id,r.tier||0);
   if(game.isNight())game.S.stats.night++;if(game.isRain())game.S.stats.rain++;if(byTrap)game.S.stats.trap++;
   game.burst(r.x,game.gy(r.x,r.z)+1.2,r.z,def.rainbow?0xffffff:def.c);game.sfx.catch();
   game.mEvent('catch',{id:r.id,night:game.isNight(),ride:!!game.veh(),quest:r.quest?r.questIdx:-1});

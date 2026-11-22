@@ -457,7 +457,7 @@ export function initExtras(){
   }});
   let zelCd=0;
   game.interact.push({x:PL.zelarna.x,z:PL.zelarna.z+4,r:8,text:()=>zelCd>0?'Zelí je dojedeno… ('+Math.ceil(zelCd)+' s)':'E – Ochutnat bolehošťské zelí (zdarma)',act:()=>{
-    if(zelCd>0)return;zelCd=90;game.stam=100;game.S.money+=20;game.sfx.sell();game.toast('🥬 Kysané zelí! Stamina na plno a +⚡20','#b6f07a');game.refreshHud();
+    if(zelCd>0)return;zelCd=90;game.stam=100;game.S.money+=20;if(!(game.inRound&&game.inRound())&&game.hallEnergy)game.hallEnergy(20);game.sfx.sell();game.toast('🥬 Kysané zelí! Stamina na plno a +⚡20','#b6f07a');game.refreshHud();
   }});
 
   /* ---------- Události ---------- */
@@ -496,7 +496,7 @@ export function initExtras(){
       g.position.set(s[0],game.gy(s[0],s[1]),s[1]);game.shadowOn(g);game.scene.add(g);
       gulasStand={g,x:s[0],z:s[1],taken:false};
       game.interact.push(gulasStand.it={x:s[0],z:s[1],r:5,text:()=>gulasStand.taken?'Už sis dal guláš':'E – Ochutnat guláš (zdarma)',act:()=>{
-        if(gulasStand.taken)return;gulasStand.taken=true;buffs.gul=45;game.stam=100;game.S.money+=50;game.S.stats.gulas=(game.S.stats.gulas||0)+1;game.sfx.sell();game.toast('🍲 Guláš! Rychlost +25 % a +⚡50','#ffd27a');game.refreshHud();game.checkBadges();
+        if(gulasStand.taken)return;gulasStand.taken=true;buffs.gul=45;game.stam=100;game.S.money+=50;if(!(game.inRound&&game.inRound())&&game.hallEnergy)game.hallEnergy(50);game.S.stats.gulas=(game.S.stats.gulas||0)+1;game.sfx.sell();game.toast('🍲 Guláš! Rychlost +25 % a +⚡50','#ffd27a');game.refreshHud();game.checkBadges();
       }});
     }else if(type==='boss'){
       const lvl=bossLevel();
@@ -541,7 +541,7 @@ export function initExtras(){
       if(b.hp<=0){
         const next=Math.min(10,b.lvl+1);
         game.S.stats.bossLvl=next;game.S.stats.bossBest=Math.max(game.S.stats.bossBest||0,b.lvl);
-        const rew=game.Round.entered?0:1300+b.lvl*200;game.S.money+=rew;game.S.stats.boss=(game.S.stats.boss||0)+1;game.onScore(400+b.lvl*80);
+        const rew=game.Round.entered?0:1300+b.lvl*200;game.S.money+=rew;if(rew&&game.hallEnergy)game.hallEnergy(rew);game.S.stats.boss=(game.S.stats.boss||0)+1;game.onScore(400+b.lvl*80);
         game.burst(b.x,game.gy(b.x,b.z)+5,b.z,0xffffff,50);game.sfx.badge();
         game.toast('🎉 Úroveň '+b.lvl+' poražena! '+(b.lvl<10?'Další je úroveň '+next+'. ':'Desátá úroveň je maximum. ')+(rew?'+⚡'+rew+' od obce':'+'+(400+b.lvl*80)+' bodů'),'#ffe94a',4.2);
         game.scene.remove(b.g);boss=null;elBoss.style.display='none';EV.cur=null;elBar.style.display='none';bossCd=180;game.refreshHud();game.checkBadges();game.save();return;
@@ -649,7 +649,7 @@ export function initExtras(){
     for(const d of DISC){
       if(game.S.visited[d.id])continue;
       const close=d.pond?game.pondDist(d.pond.ring,game.pv.x,game.pv.z)<d.r:Math.hypot(d.x-game.pv.x,d.z-game.pv.z)<d.r;
-      if(close){game.S.visited[d.id]=1;game.S.money+=25;game.sfx.badge();game.toast('📍 '+d.name+': '+d.fact+' (+⚡25)','#bfe8ff',7);game.refreshHud();game.checkBadges();break}
+      if(close){game.S.visited[d.id]=1;game.S.money+=25;if(game.hallPlace)game.hallPlace(d.id);if(!(game.inRound&&game.inRound())&&game.hallEnergy)game.hallEnergy(25);game.sfx.badge();game.toast('📍 '+d.name+': '+d.fact+' (+⚡25)','#bfe8ff',7);game.refreshHud();game.checkBadges();break}
     }
   }
   function albumHtml(){

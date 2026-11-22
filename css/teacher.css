@@ -11,6 +11,9 @@
   table{width:100%;border-collapse:collapse;font-size:22px}
   td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #ffffff22}
   td.n{text-align:right;font-variant-numeric:tabular-nums}
+  #hallbox table{font-size:16px}
+  button.mini{font-size:14px;padding:4px 10px;margin:0 4px 4px 0}
+  td.act{white-space:nowrap}
   tr.first td{color:#ffe94a;font-weight:900;font-size:28px}
   .muted{opacity:.75;font-size:15px}
   .err{color:#ffb4b4;font-weight:800;margin-top:10px;display:none}

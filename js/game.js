@@ -139,6 +139,8 @@ function mEvent(type,a={}){
     m.p+=inc;changed=true;
     if(m.p>=m.n){
       m.done=true;m.p=m.n;game.S.money+=m.reward;game.S.stars++;game.S.stats.missions++;game.sfx.badge();
+      if(game.hallMission)game.hallMission();
+      if(!(game.inRound&&game.inRound())&&game.hallEnergy)game.hallEnergy(m.reward);
       game.toast('✅ Mise splněna! +⚡'+m.reward+' a ⭐','#7dffb0');
       if(game.S.missions.every(x=>x.done)){game.S.items.magnet++;game.S.items.freeze++;game.S.items.trap+=2;setTimeout(()=>game.toast('🎁 Všechny denní mise! Bonus: posilovače','#ffe94a'),2600)}
       if(m.k==='visit')clearQuestRobots();
@@ -237,7 +239,7 @@ export function initInterakce() {
 function sellAt(x,z){
   if(!game.carry.length){game.toast('Nemáš co prodat – nachytej Ozoboty!');return}
   const v=Math.round(game.carry.reduce((a,t)=>a+game.ROB[t.id].v*t.m*(game.TIERS[t.tier||0]||game.TIERS[0]).mul,0)*game.mult());
-  game.S.money+=v;game.S.stats.earned+=v;game.toast('+⚡'+game.fmt(v),'#7dffb0');game.sfx.sell();game.burst(x,game.gy(x,z)+3,z,0xffe94a,20);
+  game.S.money+=v;game.S.stats.earned+=v;if(!(game.inRound&&game.inRound())&&game.hallEnergy)game.hallEnergy(v);game.toast('+⚡'+game.fmt(v),'#7dffb0');game.sfx.sell();game.burst(x,game.gy(x,z)+3,z,0xffe94a,20);
   game.carry=[];game.refreshCarry();game.refreshHud();game.mEvent('sell',{v});game.checkBadges();game.save();
 }
 const interact=[
@@ -250,7 +252,7 @@ game.garages.forEach(h=>interact.push({x:h.x,z:h.z+2.4,r:4.5,
   act:()=>{
     if(h.stock<=0){game.toast('Garáž je prázdná, vrať se později');return}
     if(game.carry.length>=game.cap()){game.toast('Krabice je plná! Odnes Ozoboty do výkupu','#ffb347');return}
-    h.stock--;game.carry.push({id:'evo',m:1,tier:0});game.albumBump('evo',0);game.S.stats.steal++;game.S.caught++;game.X.onScore(250);
+    h.stock--;game.carry.push({id:'evo',m:1,tier:0});game.albumBump('evo',0);game.S.stats.steal++;game.S.caught++;if(game.hallCatch)game.hallCatch();game.X.onScore(250);
     game.refreshCarry();game.refreshHud();game.sfx.catch();game.mEvent('steal');game.checkBadges();game.toast('Ukradl jsi robota Evo! Utíkej!','#ff9ad8');
   }}));
 let nearest=null;

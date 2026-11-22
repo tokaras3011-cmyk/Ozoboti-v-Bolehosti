@@ -39,7 +39,11 @@
       <table id="tbl"></table>
       <div style="margin-top:12px"><button id="dip" class="gray">🖨 Vytisknout diplomy (všichni)</button> <button id="dip3" class="gray">🖨 Jen první tři</button></div>
     </div>
-    <div class="muted">Děti hrají ve hře jako obvykle. Jakmile spustíte kolo, všem se automaticky spustí odpočet a stejná sada Ozobotů i událostí (spravedlivé soutěžení). Body se počítají z chycených Ozobotů.</div>
+    <div class="card">
+      <h2 id="halltitle" style="margin-top:0">Síň slávy</h2>
+      <div id="hallbox"></div>
+    </div>
+    <div class="muted">Děti hrají ve hře jako obvykle. Jakmile spustíte kolo, všem se automaticky spustí odpočet a stejná sada Ozobotů i událostí (spravedlivé soutěžení). Body se počítají z chycených Ozobotů. Síň slávy se počítá za celý měsíc a kolo ji nemaže.</div>
   </div>
 </div>
 <div id="diploma"></div>
@@ -47,7 +51,7 @@
 const $=id=>document.getElementById(id);
 const API_BASE=new URL('.', location.href).href;
 const PIN_KEY='ozo_teacher_pin';
-let st=null,offset=0,pin='',pollTimer=null,renderTimer=null;
+let st=null,hall=null,hallSig='',offset=0,pin='',pollTimer=null,renderTimer=null;
 
 async function teacher(action,extra={}){
   const r=await fetch(new URL('api/teacher',API_BASE),{
@@ -121,10 +125,54 @@ $('reset').onclick=()=>{if(confirm('Smazat tabuli a všechny hráče?'))post('re
 const mmss=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 async function poll(){
   try{
-    const r=await fetch(new URL('api/state',API_BASE));const d=await r.json();st=d;offset=d.round.now-Date.now();
+    const [r,h]=await Promise.all([
+      fetch(new URL('api/state',API_BASE)),
+      fetch(new URL('api/hall',API_BASE))
+    ]);
+    const d=await r.json();st=d;offset=d.round.now-Date.now();
+    hall=await h.json();
     $('join').textContent='Děti hrají na adrese této stránky (stejný web).';
     render();
+    renderHall();
   }catch(e){$('phase').textContent='Server neodpovídá…'}
+}
+function fmtDur(sec){
+  sec=Math.max(0,Math.floor(+sec||0));
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+  return h>0?h+' h '+m+' min':m+' min';
+}
+async function hallPost(action,extra){
+  const r=await teacher(action,extra);
+  let d=null;
+  try{d=await r.json()}catch(e){}
+  if(r.status===403){alert('Špatný PIN');showGate(true);return}
+  if(d&&d.error==='name-taken'){alert('To jméno už v síni je.');return}
+  if(!r.ok){alert(action==='hall-delete'?'Smazání se nepovedlo.':'Přejmenování se nepovedlo.');return}
+  poll();
+}
+function delHall(name){
+  if(confirm('Smazat hráče '+name+' ze síně slávy?'))hallPost('hall-delete',{name});
+}
+function renHall(name){
+  const next=prompt('Nové jméno pro '+name,name);
+  if(next===null)return;
+  const trimmed=next.trim();
+  if(!trimmed||trimmed===name)return;
+  hallPost('hall-rename',{name,rename:trimmed});
+}
+function renderHall(){
+  const box=$('hallbox');
+  const sig=JSON.stringify(hall&&hall.players||null)+'|'+(hall&&hall.label||'');
+  if(sig===hallSig)return;
+  hallSig=sig;
+  if(!hall||!Array.isArray(hall.players)){box.innerHTML='<p class="muted">Síň slávy neodpovídá.</p>';return}
+  $('halltitle').textContent='Síň slávy – '+(hall.label||'');
+  if(!hall.players.length){box.innerHTML='<p class="muted">Tento měsíc zatím nikdo.</p>';return}
+  box.innerHTML='<table><tr><th>#</th><th>Jméno</th><th class="n">Chyceno</th><th class="n">Energie</th><th class="n">Mise</th><th class="n">Místa</th><th class="n">Čas</th><th></th></tr>'
+    +hall.players.map((p,i)=>'<tr><td>'+(i+1)+'.</td><td>'+esc(p.name)+'</td><td class="n">'+p.caught+'</td><td class="n">'+p.energy+'</td><td class="n">'+p.missions+'</td><td class="n">'+p.places+'</td><td class="n">'+esc(fmtDur(p.seconds))+'</td><td class="act"><button type="button" class="mini gray" data-re="'+esc(p.name)+'">Přejmenovat</button><button type="button" class="mini red" data-del="'+esc(p.name)+'">Smazat</button></td></tr>').join('')
+    +'</table>';
+  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delHall(b.getAttribute('data-del')));
+  box.querySelectorAll('[data-re]').forEach(b=>b.onclick=()=>renHall(b.getAttribute('data-re')));
 }
 function render(){
   if(!st||$('panel').hidden)return;
