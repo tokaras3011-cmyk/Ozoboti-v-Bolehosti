@@ -12,12 +12,20 @@ const ROBO=[
   {id:'modr',n:'modrý',g:'modrých',v:15,c:0x2a7bff,w:22,beh:'hider',hint:'Schovávač: zalézá za domy, dokud nejsi u něj.'},
   {id:'zlut',n:'žlutý',g:'žlutých',v:25,c:0xffe62a,w:14,beh:'sprinter',hint:'Sprinter: je rychlý, ale po chvíli se unaví.'},
   {id:'fial',n:'fialový',g:'fialových',v:45,c:0xc04aff,w:8,beh:'blink',hint:'Blikač: když se přiblížíš, přeblikne jinam.'},
-  {id:'duha',n:'duhový',g:'duhových',v:150,c:0xffffff,w:0,rainbow:true,beh:'blink2',hint:'Duhový: rychlý a často bliká na pastvině.'},
+  {id:'duha',n:'duhový',g:'duhových',v:150,c:0xffffff,w:0,rainbow:true,beh:'blink2',hint:'Duhový: rychlý a často bliká kdekoli po mapě.'},
   {id:'evo',n:'Evo',g:'Evo',v:250,c:0xff7ac8,w:0,beh:'none',hint:'Robot Evo: ukradneš ho jen v garáži sousedů.'}
 ];
 const ROB={};ROBO.forEach(r=>ROB[r.id]=r);
+const TIERS=[
+  {sc:1.8,ring:0x141414,mul:1,n:'Obyčejný',rn:'černý'},
+  {sc:2.5,ring:0xffffff,mul:2,n:'Vzácný',rn:'bílý'},
+  {sc:3.0,ring:0x2a7bff,mul:4,n:'Super rare',rn:'modrý'},
+  {sc:3.0,ring:0xffc400,mul:8,n:'Legendární',rn:'zlatý'}
+];
 const ozoBody=new THREE.MeshLambertMaterial({color:0xf4f6fa}),ozoDark=new THREE.MeshLambertMaterial({color:0x22262e});
 const domeGeo=new THREE.SphereGeometry(0.5,16,10,0,Math.PI*2,0,Math.PI/2),baseGeo=new THREE.CylinderGeometry(0.55,0.58,0.22,16),bandGeo=new THREE.CylinderGeometry(0.575,0.575,0.1,16),wheelGeo=new THREE.CylinderGeometry(0.2,0.2,0.12,10),ledGeo=new THREE.SphereGeometry(0.14,10,8);
+function pickTier(){const r=Math.random();if(r<0.7)return 0;if(r<0.92)return 1;if(r<0.98)return 2;return 3}
+function applyTier(bot,tier){const t=TIERS[tier]||TIERS[0];bot.tier=tier;bot.g.scale.setScalar(t.sc)}
 function makeOzo(colorHex,sc=1){
   const g=new THREE.Group();
   const base=new THREE.Mesh(baseGeo,ozoDark);base.position.y=0.3;g.add(base);
@@ -37,12 +45,11 @@ const robots=[],groups=[];
 function randomFree(){
   for(let t=0;t<60;t++){
     let x,z;
-    if(Math.random()<0.75){const b=game.M.B[(Math.random()*game.M.B.length)|0],a=game.rnd(0,6.28),r=Math.max(b[2],b[3])/2*1.4+game.rnd(2.5,10);x=b[0]+Math.cos(a)*r;z=b[1]+Math.sin(a)*r}
-    else{const [a,b,c,d]=game.M.region;x=game.rnd(a+6,b-6);z=game.rnd(c+6,d-6)}
+    if(Math.random()<0.7){const b=game.M.B[(Math.random()*game.M.B.length)|0],a=game.rnd(0,6.28),r=Math.max(b[2],b[3])/2*1.4+game.rnd(2.5,10);x=b[0]+Math.cos(a)*r;z=b[1]+Math.sin(a)*r}
+    else{x=game.rnd(game.RX0+8,game.RX1-8);z=game.rnd(game.RZ0+8,game.RZ1-8)}
     if(x<game.RX0+3||x>game.RX1-3||z<game.RZ0+3||z>game.RZ1-3)continue;
     if(!game.freeAt(x,z,1.5))continue;
     if(Math.abs(x-game.H.x)<19&&Math.abs(z-game.H.z)<19)continue;
-    if(Math.abs(x-game.PAST.x)<19&&Math.abs(z-game.PAST.z)<19)continue;
     return [x,z];
   }
   return [game.H.x+25,game.H.z];
@@ -51,7 +58,7 @@ function pickType(){const list=ROBO.filter(t=>t.w>0),tot=list.reduce((a,r)=>a+r.
 function setType(r,id){const def=ROB[id];r.id=id;r.lm.color.setHex(def.c);r.gm.color.setHex(def.c)}
 function spawnRobot(r){
   if(r.ev){setType(r,r.evType);r.x=r.ex+game.rnd(-5,5);r.z=r.ez+game.rnd(-5,5);r.hx=r.ex;r.hz=r.ez;r.leash=r.evLeash||25}
-  else if(r.gold){setType(r,'duha');r.x=game.PAST.x+game.rnd(-12,12);r.z=game.PAST.z+game.rnd(-12,12);r.hx=game.PAST.x;r.hz=game.PAST.z;r.leash=14}
+  else if(r.gold){setType(r,'duha');[r.x,r.z]=randomFree();r.hx=r.x;r.hz=r.z;r.leash=40}
   else if(r.group){
     setType(r,'zel');const g=r.group,ld=g.members.find(m=>m.alive&&m!==r);
     if(ld){r.x=ld.x+game.rnd(-3,3);r.z=ld.z+game.rnd(-3,3);r.hx=ld.hx;r.hz=ld.hz}
@@ -60,13 +67,15 @@ function spawnRobot(r){
   }
   else if(r.quest){setType(r,r.questType);r.leash=10}
   else{setType(r,pickType());[r.x,r.z]=randomFree();r.hx=r.x;r.hz=r.z;r.leash=40}
+  applyTier(r,r.quest?0:pickTier());
   r.heading=game.rnd(0,6.28);r.t=game.rnd(0.5,2);r.alive=true;r.g.visible=true;r.ph=game.rnd(0,6);
   r.cd=game.rnd(1,5);r.run=2.5;r.rest=0;r.zz=1;r.zt=0;r.stop=false;r.dart=0;r.hideT=0;r.hide=null;
   r.g.position.set(r.x,game.gy(r.x,r.z),r.z);
 }
 function addRobot(opts={}){
-  const o=makeOzo(0xffffff,1.8);game.scene.add(o.g);
-  const r=Object.assign(o,{gold:false,group:null,quest:false,alive:false,respawn:0,x:0,z:0},opts);
+  const o=makeOzo(0xffffff,1);
+  game.scene.add(o.g);
+  const r=Object.assign(o,{gold:false,group:null,quest:false,alive:false,respawn:0,x:0,z:0,tier:0},opts);
   robots.push(r);spawnRobot(r);return r;
 }
 /* Pomocníci z dílny */
@@ -104,6 +113,7 @@ function makeHelper(i){
   bind(game, "makeHelper", () => makeHelper);
   bind(game, "makeOzo", () => makeOzo);
   bind(game, "pickType", () => pickType);
+  bind(game, "TIERS", () => TIERS);
   bind(game, "robots", () => robots);
   bind(game, "spawnRobot", () => spawnRobot);
 }
@@ -112,8 +122,8 @@ export function initRobotAi() {
 /* Chování Ozobotů */
 function catchRobot(r,byTrap=false){
   const def=game.ROB[r.id],m=(game.isNight()?1.25:1)*(game.isRain()?1.15:1)*game.X.valueMult();
-  game.carry.push({id:r.id,m});r.alive=false;r.g.visible=false;r.respawn=r.gold?45:game.rnd(14,28);
-  game.S.caught++;game.S.album[r.id]=(game.S.album[r.id]||0)+1;
+  game.carry.push({id:r.id,m,tier:r.tier||0});r.alive=false;r.g.visible=false;r.respawn=r.gold?45:game.rnd(14,28);
+  game.S.caught++;game.albumBump(r.id,r.tier||0);
   if(game.isNight())game.S.stats.night++;if(game.isRain())game.S.stats.rain++;if(byTrap)game.S.stats.trap++;
   game.burst(r.x,game.gy(r.x,r.z)+1.2,r.z,def.rainbow?0xffffff:def.c);game.sfx.catch();
   game.mEvent('catch',{id:r.id,night:game.isNight(),ride:!!game.veh(),quest:r.quest?r.questIdx:-1});
@@ -211,7 +221,7 @@ function updateRobots(dt){
     r.glow.scale.setScalar((tired?1.2:2.0+0.4*Math.sin(game.time*pulse+r.ph))*ledMul);
     if(d<game.catchR()&&Math.abs(game.pv.y)<2.2){
       if(game.carry.length<game.cap())catchRobot(r);
-      else if(game.fullCd<=0){game.toast('Krabice je plná! Běž prodat do výkupu.','#ffb347');game.fullCd=2.5}
+      else if(game.fullCd<=0){game.toast(game.veh()&&game.veh().noCargo?'Kůň žádné Ozoboty neuveze.':'Krabice je plná! Běž prodat do výkupu.','#ffb347');game.fullCd=2.5}
     }
     if(r.alive){for(const t of game.traps){if(Math.hypot(t.x-r.x,t.z-r.z)<1.9&&game.carry.length<game.cap()){catchRobot(r,true);break}}}
   }

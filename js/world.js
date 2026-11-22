@@ -1,5 +1,6 @@
 import { game, bind, bindLet } from './context.js';
 import * as THREE from 'three';
+import { LESY } from '../map-lesy.js';
 
 export const api = {};
 
@@ -16,20 +17,34 @@ function baseH(x,z){
   const o=Math.hypot(ox,oz);if(o>0)v*=Math.max(0,1-o/90);
   return v;
 }
-const pads=[{x:game.H.x,z:game.H.z-5,r:22,b:14,h:baseH(game.H.x,game.H.z-5)},{x:game.PAST.x,z:game.PAST.z,r:22,b:12,h:baseH(game.PAST.x,game.PAST.z)}];
+const pads=[{x:game.H.x,z:game.H.z-5,r:22,b:14,h:baseH(game.H.x,game.H.z-5)}];
+function ringDist(ring,x,z){
+  let inside=false,best=1e9;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i][0],zi=ring[i][1],xj=ring[j][0],zj=ring[j][1];
+    if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/((zj-zi)||1e-12)+xi)inside=!inside;
+    const vx=xj-xi,vz=zj-zi,L=vx*vx+vz*vz||1e-9;
+    let t=((x-xi)*vx+(z-zi)*vz)/L;if(t<0)t=0;else if(t>1)t=1;
+    const d=Math.hypot(x-(xi+vx*t),z-(zi+vz*t));
+    if(d<best)best=d;
+  }
+  return inside?-best:best;
+}
+const POND_BANK=2.6;
 const ponds=game.M.W.map(([name,pts])=>{
-  const xs=pts.filter((_,i)=>i%2===0),zs=pts.filter((_,i)=>i%2===1);
-  const cx=xs.reduce((a,b)=>a+b)/xs.length,cz=zs.reduce((a,b)=>a+b)/zs.length;
-  const r=xs.reduce((a,x,i)=>a+Math.hypot(x-cx,zs[i]-cz),0)/xs.length;
-  const wy=Math.min(...xs.map((x,i)=>baseH(x,zs[i])))-0.15;
-  return {name,pts,cx,cz,r,wy};
+  const ring=[];
+  for(let i=0;i<pts.length;i+=2)ring.push([pts[i],pts[i+1]]);
+  const cx=ring.reduce((a,p)=>a+p[0],0)/ring.length,cz=ring.reduce((a,p)=>a+p[1],0)/ring.length;
+  const r=ring.reduce((a,p)=>a+Math.hypot(p[0]-cx,p[1]-cz),0)/ring.length;
+  const wy=Math.min(...ring.map(p=>baseH(p[0],p[1])))-0.15;
+  return {name,pts,ring,cx,cz,r,wy};
 });
 // Lovecký zámeček je mimo výškovou mřížku (terén tam padá do roviny). Kopec má rovinku pod zámkem a pozvolný svah.
 const hills=[{x:-362.3,z:-320.1,r:24,b:38,h:16}];
 function heightAt(x,z){
   let v=baseH(x,z);
   for(const p of pads){const d=Math.hypot(x-p.x,z-p.z);if(d<p.r+p.b)v+=(p.h-v)*(1-game.smooth(p.r,p.r+p.b,d))}
-  for(const p of ponds){const d=Math.hypot(x-p.cx,z-p.cz);if(d<p.r*1.05+5){const t=1-game.smooth(p.r*1.05,p.r*1.05+5,d);v=Math.min(v,v+((p.wy-0.9)-v)*t)}}
+  for(const p of ponds){const sd=ringDist(p.ring,x,z);if(sd<POND_BANK){const t=1-game.smooth(-0.8,POND_BANK,sd);v=Math.min(v,v+((p.wy-0.7)-v)*t)}}
   for(const h of hills){const d=Math.hypot(x-h.x,z-h.z);if(d<h.r+h.b)v+=h.h*(1-game.smooth(h.r,h.r+h.b,d))}
   return v;
 }
@@ -73,16 +88,37 @@ const sfx={catch:()=>{beep(880,.07);setTimeout(()=>beep(1320,.09),70)},sell:()=>
   badge:()=>{[660,880,1100,1320].forEach((f,i)=>setTimeout(()=>beep(f,.12,'triangle',.06),i*90))},blink:()=>beep(1800,.05,'sine',.03),
   item:()=>{beep(440,.05,'sawtooth',.05);setTimeout(()=>beep(880,.12,'sawtooth',.05),50)}};
 
+/* Zasněžená je jen polovina svahu směrem do vesnice, ne rovina pod zámkem a ne odvrácená strana. */
+const snowHill=hills[0];
+const snowLen=Math.hypot(game.H.x-snowHill.x,game.H.z-snowHill.z)||1;
+const snowX=(game.H.x-snowHill.x)/snowLen,snowZ=(game.H.z-snowHill.z)/snowLen;
+function onSnow(x,z){
+  const dx=x-snowHill.x,dz=z-snowHill.z,d=Math.hypot(dx,dz);
+  if(d<snowHill.r+0.6||d>snowHill.r+snowHill.b)return null;
+  const ux=dx/d,uz=dz/d;
+  if(ux*snowX+uz*snowZ<=0.08)return null;
+  const t=(d-snowHill.r)/snowHill.b;
+  return {x:ux,z:uz,steep:Math.sin(Math.PI*game.clamp(t,0,1))};
+}
+function snowSlide(x,z){
+  const s=onSnow(x,z);
+  if(!s)return null;
+  const sp=4+18*s.steep;
+  return {x:s.x*sp,z:s.z*sp};
+}
 
   bindLet(game, "AC", () => AC, (v) => { AC = v; });
   bind(game, "GLOW", () => GLOW);
   bind(game, "box", () => box);
   bind(game, "gy", () => gy);
   bind(game, "hills", () => hills);
+  bind(game, "onSnow", () => onSnow);
+  bind(game, "snowSlide", () => snowSlide);
   bind(game, "label", () => label);
   bind(game, "mat", () => mat);
   bind(game, "placeLabel", () => placeLabel);
   bind(game, "ponds", () => ponds);
+  bind(game, "pondDist", () => ringDist);
   bind(game, "sfx", () => sfx);
   bind(game, "shadowOn", () => shadowOn);
 }
@@ -262,7 +298,7 @@ game.ponds.forEach(p=>{
   const sh=new THREE.Shape();
   for(let i=0;i<p.pts.length;i+=2){i?sh.lineTo(p.pts[i],-p.pts[i+1]):sh.moveTo(p.pts[i],-p.pts[i+1])}
   const m=new THREE.Mesh(new THREE.ShapeGeometry(sh),waterMat);m.rotation.x=-Math.PI/2;m.position.y=p.wy;m.receiveShadow=true;game.scene.add(m);
-  game.addCircObs(p.cx,p.cz,p.r*0.85);
+  game.addPolyObs(p.ring);
   const reeds=[];for(let i=0;i<p.pts.length;i+=4)reeds.push({x:p.pts[i],y:game.gy(p.pts[i],p.pts[i+1]),z:p.pts[i+1],sx:0.25,sy:game.rnd(1.2,2.2),sz:0.25,color:0x7a8a3a});
   instanced(unitBox,white,reeds,true);
 });
@@ -508,22 +544,28 @@ function makeBull(x,z){
   const ice=new THREE.Mesh(new THREE.BoxGeometry(4.2,3.4,2.4),new THREE.MeshLambertMaterial({color:0x9fe6ff,transparent:true,opacity:0.55}));ice.position.set(1,1.7,0);ice.visible=false;g.add(ice);g.userData.ice=ice;
   g.position.set(x,game.gy(x,z),z);g.scale.setScalar(1.15);game.shadowOn(g);game.scene.add(g);return g;
 }
-game.M.NB.forEach((n,ni)=>{
-  const [bx,bz,hx,hz,a]=n;
+function addGarage(hx,hz,a,name){
   game.shadowOn(game.box(4.2,2.6+1.6,3.2,0xc8ccd4,hx,-1.6,hz));game.shadowOn(game.box(4.6,0.3,3.6,0x556070,hx,2.6,hz));
   game.box(3.0,2.0,0.1,0x9aa3b0,hx,0,hz+1.65);for(let k=0;k<4;k++)game.box(3.0,0.06,0.12,0x7a8390,hx,0.4+k*0.45,hz+1.66);
   game.addBoxObs(hx,hz,4.2,3.2);
   const h={x:hx,z:hz,stock:3,timer:0,evos:[]};
   for(let k=0;k<3;k++){const o=game.makeOzo(0xff7ac8,1.3);o.g.position.set(hx-1.3+k*1.3,game.gy(hx,hz)+2.9,hz);game.scene.add(o.g);h.evos.push(o.g)}
-  game.placeLabel(game.label(game.GARAGE_NAMES[ni%game.GARAGE_NAMES.length],"#ff9ad8",0.75),hx,6.2,hz);
+  game.placeLabel(game.label(name,"#ff9ad8",0.75),hx,6.2,hz);
   garages.push(h);
   const dog=makeDog(hx+3*Math.cos(a+1.5),hz+3*Math.sin(a+1.5));
-  guards.push({m:dog,hx:hx,hz:hz,spd:6.6,sight:12,leash:26,kind:'pes',frozen:0});
+  guards.push({m:dog,hx,hz,spd:6.6,sight:12,leash:26,kind:'pes',frozen:0});
+}
+game.M.NB.forEach((n,ni)=>{
+  const [, ,hx,hz,a]=n;
+  addGarage(hx,hz,a,game.GARAGE_NAMES[ni%game.GARAGE_NAMES.length]);
 });
-game.fence(game.PAST.x,game.PAST.z,34,34,0xbbbbbb);
-game.placeLabel(game.label('Pastvina – pozor, býk!',"#ffd21a",0.9),game.PAST.x,6,game.PAST.z-17);
-guards.push({m:makeBull(game.PAST.x,game.PAST.z),hx:game.PAST.x,hz:game.PAST.z,spd:7.4,sight:15,leash:22,kind:'býk',frozen:0});
-
+[
+  {x:397.2,z:-298.6,hx:403.9,hz:-300.4,name:'Garáž v Lipinách'},
+  {x:449.4,z:-303.3,hx:445.5,hz:-296.5,name:'Garáž na východě Lipin'},
+  {x:-314.4,z:-403.9,hx:-319.5,hz:-412.6,name:'Garáž na západě Lhoty'},
+  {x:-261.5,z:-425.8,hx:-254.6,hz:-413.8,name:'Garáž ve Lhotě'},
+  {x:-273.3,z:-448.0,hx:-276.2,hz:-459.0,name:'Garáž na jihu Lhoty'}
+].forEach(g=>addGarage(g.x,g.z,Math.atan2(g.z-g.hz,g.x-g.hx)-1.5,g.name));
 /* Ohrada u Agrospolu – krávy a býci útočí jen uvnitř plotu */
 function makeHerdAnimal(x,z,bull){
   const g=new THREE.Group(),body=bull?0x2a2a2a:0xf7f4ee,spot=bull?0x111111:0x8a4b28;
@@ -570,6 +612,7 @@ function makeHerdAnimal(x,z,bull){
     guards.push({m,hx:x,hz:z,spd:bull?6.3:5.1,sight:26,leash:40,kind:bull?'býk':'kráva',frozen:0,pen,wT:game.rnd(0.4,3)});
   }
   game.HERD={x:hx,z:hz,x0,x1,z0,z1};
+  guards.push({m:makeBull(hx,hz),hx,hz,spd:7.4,sight:16,leash:24,kind:'býk',frozen:0,pen,wT:game.rnd(0.6,2.4)});
 }
 
 
@@ -640,7 +683,6 @@ const nearRail=(x,z,pad)=>{
     const x=game.rnd(ox0+6,ox1-6),z=game.rnd(oz0+6,oz1-6),s=game.rnd(0.8,1.4);
     if(!game.freeAt(x,z,3.5)||game.nearRoad(x,z,2.5)||onPitch(x,z,4))continue;
     if(Math.abs(x-game.H.x)<22&&Math.abs(z-game.H.z)<24)continue;
-    if(Math.abs(x-game.PAST.x)<20&&Math.abs(z-game.PAST.z)<20)continue;
     if(game.HERD&&x>game.HERD.x0-3&&x<game.HERD.x1+3&&z>game.HERD.z0-3&&z<game.HERD.z1+3)continue;
     const y=game.gy(x,z);
     trunks.push({x,y,z,sx:0.7*s,sy:2.4*s,sz:0.7*s,color:0x7a4a22});
@@ -660,54 +702,58 @@ const nearRail=(x,z,pad)=>{
   const forests=[];
   const inMeadow=(x,z)=>x>game.RX0+18&&x<game.RX1-18&&z>game.RZ0+18&&z<game.RZ1-18&&(x<ox0-8||x>ox1+8||z<oz0-8||z>oz1+8);
   const trunks=[],spruce1=[],spruce2=[],round=[],bush=[],rock=[],hay=[],crop=[];
-  const treeAt=(x,z,s,i)=>{
-    if(!inMeadow(x,z)||!game.freeAt(x,z,2))return false;
-    const y=game.gy(x,z);
-    trunks.push({x,y,z,sx:0.7*s,sy:2.4*s,sz:0.7*s,color:0x7a4a22});
-    if(i%4===0)round.push({x,y:y+1.6*s,z,sx:4.2*s,sy:4.2*s,sz:4.2*s,color:[0x3a9a3a,0x52b040,0x2f8a3a][i%3]});
-    else{spruce1.push({x,y:y+1.6*s,z,sx:4.4*s,sy:3.6*s,sz:4.4*s,color:0x1f7a2e});spruce2.push({x,y:y+3.6*s,z,sx:3.2*s,sy:3.2*s,sz:3.2*s,color:0x2a9038});}
-    game.addCircObs(x,z,0.75*s);
-    return true;
-  };
-  const grove=(cx,cz,big)=>{
-    if(!inMeadow(cx,cz)||!game.freeAt(cx,cz,10)||onPitch(cx,cz,28)||nearRail(cx,cz,26))return;
-    if((game.hills||[]).some(h=>Math.hypot(cx-h.x,cz-h.z)<h.r+h.b+22))return;
-    const R=big?38:28;
-    const br=game.freeAt(cx,cz,R*0.9)?R*0.9:(game.freeAt(cx,cz,22)?22:16);
-    const want=br>30?78:br>20?48:30;
-    let got=0;
-    for(let k=0;k<want*6&&got<want;k++){
-      const a=game.rnd(0,6.28),d=game.rnd(0.6,R),x=cx+Math.cos(a)*d,z=cz+Math.sin(a)*d,s=game.rnd(1.45,2.25);
-      if(!inMeadow(x,z)||onPitch(x,z,2)||nearRail(x,z,4))continue;
-      const y=game.gy(x,z);
-      trunks.push({x,y,z,sx:0.75*s,sy:2.6*s,sz:0.75*s,color:0x6a3e1c});
-      if(got%5===0)round.push({x,y:y+1.7*s,z,sx:4.6*s,sy:4.4*s,sz:4.6*s,color:[0x1c6a28,0x2f8a32,0x246b2e][got%3]});
-      else{spruce1.push({x,y:y+1.7*s,z,sx:4.8*s,sy:4.0*s,sz:4.8*s,color:0x1a6828});spruce2.push({x,y:y+3.8*s,z,sx:3.4*s,sy:3.4*s,sz:3.4*s,color:0x228034});}
-      if(d>br-0.6)game.addCircObs(x,z,0.9*s);
-      got++;
+  for(const ring of LESY){
+    let cx=0,cz=0,a=0,x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity,rad=0;
+    for(let i=0;i<ring.length;i++){
+      const [px,pz]=ring[i],[qx,qz]=ring[(i+1)%ring.length],c=px*qz-qx*pz;
+      a+=c;cx+=(px+qx)*c;cz+=(pz+qz)*c;
+      if(px<x0)x0=px;if(px>x1)x1=px;if(pz<z0)z0=pz;if(pz>z1)z1=pz;
     }
-    if(got<14)return;
-    game.addCircObs(cx,cz,br);
-    meadow.push({x:cx,z:cz,k:'tree',r:br});
-    forests.push({x:cx,z:cz,r:br});
-  };
-  [[game.RX0+72,game.RZ0+72],[game.RX1-72,game.RZ0+72],[game.RX0+72,game.RZ1-72],[game.RX1-72,game.RZ1-72]].forEach(([x,z])=>grove(x,z,true));
-  for(let g=0,t=0;g<26&&t<700;t++){
-    const x=game.rnd(game.RX0+55,game.RX1-55),z=game.rnd(game.RZ0+55,game.RZ1-55);
-    if(!inMeadow(x,z))continue;
-    grove(x,z,t%4!==0);
-    g++;
+    cx=a?cx/(3*a):ring.reduce((s,p)=>s+p[0],0)/ring.length;
+    cz=a?cz/(3*a):ring.reduce((s,p)=>s+p[1],0)/ring.length;
+    for(const p of ring)rad=Math.max(rad,Math.hypot(p[0]-cx,p[1]-cz));
+    const holes=[];
+    for(const [k,pts] of game.M.R){
+      const hw=(k?game.roadHalf[1]:game.roadHalf[0])+0.75;
+      for(let i=0;i<pts.length-2;i+=2){
+        const ax=pts[i],az=pts[i+1],bx=pts[i+2],bz=pts[i+3];
+        if(Math.max(ax,bx)<x0-8||Math.min(ax,bx)>x1+8||Math.max(az,bz)<z0-8||Math.min(az,bz)>z1+8)continue;
+        const L=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(L/8));
+        let hit=false;
+        for(let s=0;s<=n;s++){const x=ax+(bx-ax)*s/n,z=az+(bz-az)*s/n;if(game.pondDist(ring,x,z)<hw){hit=true;break}}
+        if(!hit)continue;
+        const ux=(bx-ax)/(L||1),uz=(bz-az)/(L||1),nx=-uz*hw,nz=ux*hw,ex=ux*1.6,ez=uz*1.6;
+        holes.push([[ax-ex+nx,az-ez+nz],[bx+ex+nx,bz+ez+nz],[bx+ex-nx,bz+ez-nz],[ax-ex-nx,az-ez-nz]]);
+      }
+    }
+    let got=0;
+    for(let x=Math.max(x0,game.RX0+8);x<=Math.min(x1,game.RX1-8);x+=5.1){
+      for(let z=Math.max(z0,game.RZ0+8);z<=Math.min(z1,game.RZ1-8);z+=5.1){
+        const jx=x+((got*13)%5)-2,jz=z+((got*7)%5)-2;
+        if(game.pondDist(ring,jx,jz)>-2.2)continue;
+        if(jx<game.RX0+8||jx>game.RX1-8||jz<game.RZ0+8||jz>game.RZ1-8)continue;
+        if(!game.freeAt(jx,jz,1.5)||game.nearRoad(jx,jz,1.3)||onPitch(jx,jz,3)||nearRail(jx,jz,4))continue;
+        const s=1.35+((got*17)%10)*0.08,y=game.gy(jx,jz);
+        trunks.push({x:jx,y,z:jz,sx:0.75*s,sy:2.6*s,sz:0.75*s,color:0x6a3e1c});
+        if(got%5===0)round.push({x:jx,y:y+1.7*s,z:jz,sx:4.6*s,sy:4.4*s,sz:4.6*s,color:[0x1c6a28,0x2f8a32,0x246b2e][got%3]});
+        else{spruce1.push({x:jx,y:y+1.7*s,z:jz,sx:4.8*s,sy:4.0*s,sz:4.8*s,color:0x1a6828});spruce2.push({x:jx,y:y+3.8*s,z:jz,sx:3.4*s,sy:3.4*s,sz:3.4*s,color:0x228034});}
+        got++;
+      }
+    }
+    game.addPolyObs(ring,holes);
+    forests.push({ring,x:cx,z:cz,r:rad});
   }
+  const wooded=(x,z)=>forests.some(f=>game.pondDist(f.ring,x,z)<2);
   for(let i=0,t=0;i<160&&t<1000;t++){
     const x=game.rnd(game.RX0+22,game.RX1-22),z=game.rnd(game.RZ0+22,game.RZ1-22);
-    if(!inMeadow(x,z)||!game.freeAt(x,z,1.2)||onPitch(x,z,6)||nearRail(x,z,5))continue;
+    if(!inMeadow(x,z)||wooded(x,z)||!game.freeAt(x,z,1.2)||onPitch(x,z,6)||nearRail(x,z,5))continue;
     const y=game.gy(x,z),s=game.rnd(0.7,1.35);
     bush.push({x,y,z,sx:1.7*s,sy:1.15*s,sz:1.7*s,color:i%2?0x3c9a34:0x2f7a2c});
     i++;
   }
   for(let i=0,t=0;i<55&&t<400;t++){
     const x=game.rnd(game.RX0+26,game.RX1-26),z=game.rnd(game.RZ0+26,game.RZ1-26);
-    if(!inMeadow(x,z)||!game.freeAt(x,z,1.6)||onPitch(x,z,6)||nearRail(x,z,5))continue;
+    if(!inMeadow(x,z)||wooded(x,z)||!game.freeAt(x,z,1.6)||onPitch(x,z,6)||nearRail(x,z,5))continue;
     const y=game.gy(x,z),s=game.rnd(0.85,1.7);
     rock.push({x,y,z,sx:1.6*s,sy:game.rnd(0.55,1.15)*s,sz:1.45*s,color:i%3?0x8b8f88:0x6e726c});
     game.addCircObs(x,z,0.7*s);
@@ -715,11 +761,11 @@ const nearRail=(x,z,pad)=>{
   }
   for(let g=0,t=0;g<16&&t<240;t++){
     const x=game.rnd(game.RX0+30,game.RX1-30),z=game.rnd(game.RZ0+30,game.RZ1-30);
-    if(!inMeadow(x,z)||onPitch(x,z,8)||nearRail(x,z,8))continue;
+    if(!inMeadow(x,z)||wooded(x,z)||onPitch(x,z,8)||nearRail(x,z,8))continue;
     let n=0;
     for(let k=0;k<4;k++){
       const hx=x+game.rnd(-3.2,3.2),hz=z+game.rnd(-3.2,3.2);
-      if(!inMeadow(hx,hz)||!game.freeAt(hx,hz,1.1))continue;
+      if(!inMeadow(hx,hz)||wooded(hx,hz)||!game.freeAt(hx,hz,1.1))continue;
       hay.push({x:hx,y:game.gy(hx,hz),z:hz,sx:1.4,sy:0.9,sz:0.95,ry:game.rnd(0,3.14),color:k%2?0xd7a441:0xc4842a});
       game.addCircObs(hx,hz,0.7);
       n++;
@@ -728,12 +774,12 @@ const nearRail=(x,z,pad)=>{
   }
   for(let g=0,t=0;g<14&&t<220;t++){
     const x=game.rnd(game.RX0+40,game.RX1-40),z=game.rnd(game.RZ0+40,game.RZ1-40);
-    if(!inMeadow(x,z)||!game.freeAt(x,z,7)||onPitch(x,z,12)||nearRail(x,z,12))continue;
+    if(!inMeadow(x,z)||wooded(x,z)||!game.freeAt(x,z,7)||onPitch(x,z,12)||nearRail(x,z,12))continue;
     const wheat=g%2===0;
     let n=0;
     for(let i=0;i<6;i++)for(let j=0;j<4;j++){
       const px=x-5+i*2,pz=z-3+j*2;
-      if(!inMeadow(px,pz))continue;
+      if(!inMeadow(px,pz)||wooded(px,pz))continue;
       crop.push({x:px,y:game.gy(px,pz),z:pz,sx:1.05,sy:wheat?0.72:0.95,sz:1.05,color:wheat?((i+j)%2?0xe6c84a:0xc9a63a):((i+j)%3?0x8fd05a:0x6fb04a)});
       n++;
     }
@@ -749,11 +795,86 @@ const nearRail=(x,z,pad)=>{
   if(bush.length)game.instanced(sg,game.white,bush,true);
   if(rock.length)game.instanced(sg,game.white,rock,true);
   if(crop.length)game.instanced(sg,game.white,crop,true);
+  function touchForest(x,z,pad){
+    if(game.nearRoad(x,z,0.9))return false;
+    return forests.some(f=>game.pondDist(f.ring,x,z)<pad);
+  }
   bind(game,'meadow',()=>meadow);
   bind(game,'forests',()=>forests);
+  bind(game,'touchForest',()=>touchForest);
+  initSnihUZamecku();
+}
 }
 
+/* Bílý pás na svahu a chumelenice jen nad ním. */
+function initSnihUZamecku(){
+  const hill=game.hills[0];
+  const vlen=Math.hypot(game.H.x-hill.x,game.H.z-hill.z)||1;
+  const vx=(game.H.x-hill.x)/vlen,vz=(game.H.z-hill.z)/vlen;
+  const AMAX=Math.acos(0.12),R0=hill.r+1.1,R1=hill.r+hill.b-0.5;
+  const ROWS=22,COLS=40;
+  const pos=[],col=[],idx=[],grid=[];
+  for(let a=0;a<=ROWS;a++){
+    const d=R0+(R1-R0)*a/ROWS;
+    const row=[];
+    for(let s=0;s<=COLS;s++){
+      const ang=-AMAX+2*AMAX*s/COLS,ca=Math.cos(ang),sa=Math.sin(ang);
+      const x=hill.x+(vx*ca-vz*sa)*d,z=hill.z+(vz*ca+vx*sa)*d;
+      const ok=!!game.onSnow(x,z);
+      const vi=pos.length/3;
+      pos.push(x,game.gy(x,z)+0.08,z);
+      const shade=ok?0.9+((a+s)%5)*0.02:0;
+      col.push(shade,shade,Math.min(1,shade+0.04));
+      row.push(ok?vi:-1);
+    }
+    grid.push(row);
+  }
+  for(let a=0;a<ROWS;a++)for(let s=0;s<COLS;s++){
+    const a00=grid[a][s],a10=grid[a+1][s],a01=grid[a][s+1],a11=grid[a+1][s+1];
+    if(a00<0||a10<0||a01<0||a11<0)continue;
+    idx.push(a00,a11,a10,a00,a01,a11);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const snow=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+  snow.receiveShadow=true;snow.frustumCulled=false;game.scene.add(snow);
 
+  const FN=180,flakePos=new Float32Array(FN*3),flakeSp=new Float32Array(FN);
+  function placeFlake(i,high){
+    for(let n=0;n<8;n++){
+      const ang=(Math.random()-0.5)*2*AMAX;
+      const ca=Math.cos(ang),sa=Math.sin(ang);
+      const ux=vx*ca-vz*sa,uz=vz*ca+vx*sa;
+      const d=hill.r+2+Math.random()*(hill.b-5);
+      const x=hill.x+ux*d,z=hill.z+uz*d;
+      if(!game.onSnow(x,z))continue;
+      const k=i*3;
+      flakePos[k]=x;flakePos[k+2]=z;
+      flakePos[k+1]=game.gy(x,z)+(high?game.rnd(14,24):game.rnd(0.8,22));
+      flakeSp[i]=game.rnd(0,2.2);
+      return;
+    }
+    const k=i*3,x=hill.x+vx*(hill.r+hill.b*0.45),z=hill.z+vz*(hill.r+hill.b*0.45);
+    flakePos[k]=x;flakePos[k+2]=z;flakePos[k+1]=game.gy(x,z)+(high?18:8);flakeSp[i]=1;
+  }
+  for(let i=0;i<FN;i++)placeFlake(i,false);
+  const flakeGeo=new THREE.BufferGeometry();
+  flakeGeo.setAttribute('position',new THREE.BufferAttribute(flakePos,3));
+  const flakes=new THREE.Points(flakeGeo,new THREE.PointsMaterial({color:0xffffff,size:0.34,sizeAttenuation:true,transparent:true,opacity:0.9,depthWrite:false}));
+  flakes.frustumCulled=false;game.scene.add(flakes);
+  function tickSnow(dt){
+    for(let i=0;i<FN;i++){
+      const k=i*3;
+      flakePos[k+1]-=(3.4+flakeSp[i])*dt;
+      flakePos[k]+=Math.sin(game.time*1.2+i)*dt*0.28;
+      if(flakePos[k+1]<game.gy(flakePos[k],flakePos[k+2])+0.4||!game.onSnow(flakePos[k],flakePos[k+2]))placeFlake(i,true);
+    }
+    flakeGeo.attributes.position.needsUpdate=true;
+  }
+  bind(game,'tickSnow',()=>tickSnow);
 }
 
 export function initDenNocAPocasi() {
@@ -817,6 +938,7 @@ const isNight=()=>night>0.55,isRain=()=>W.rain>0.4;
 function tickAmbient(dt){
   game.clouds.forEach(c=>{c.position.x+=dt*4;if(c.position.x>760)c.position.x=-760});
   updateDay(dt);
+  if(game.tickSnow)game.tickSnow(dt);
 }
 api.tick=tickAmbient;
 
@@ -880,16 +1002,29 @@ function makeDeer(kind,x,z){
   }
   g.position.set(x,game.gy(x,z),z);g.scale.setScalar(kind==='srnka'?0.82:kind==='muflon'?1.15:1);game.shadowOn(g);game.scene.add(g);return g;
 }
+function forestRim(f){
+  const ring=f.ring;
+  for(let n=0;n<16;n++){
+    const i=(Math.random()*ring.length)|0,a=ring[i],b=ring[(i+1)%ring.length];
+    const t=Math.random(),x0=a[0]+(b[0]-a[0])*t,z0=a[1]+(b[1]-a[1])*t;
+    const vx=b[0]-a[0],vz=b[1]-a[1],l=Math.hypot(vx,vz)||1;
+    let nx=vz/l,nz=-vx/l;
+    if(game.pondDist(ring,x0+nx*4,z0+nz*4)<0){nx=-nx;nz=-nz}
+    const off=game.rnd(3.4,8.5),x=x0+nx*off,z=z0+nz*off;
+    if(x<game.RX0+6||x>game.RX1-6||z<game.RZ0+6||z>game.RZ1-6)continue;
+    if(game.pondDist(ring,x,z)<2||!game.freeAt(x,z,1.1))continue;
+    return [x,z];
+  }
+  return null;
+}
 function spawnDeer(){
-  const near=(game.forests||[]).filter(f=>Math.hypot(f.x-game.pv.x,f.z-game.pv.z)<110);
+  const near=(game.forests||[]).filter(f=>game.pondDist(f.ring,game.pv.x,game.pv.z)<100);
   if(!near.length)return;
   const f=near[(Math.random()*near.length)|0],kind=DEER_KIND[(Math.random()*DEER_KIND.length)|0];
-  for(let t=0;t<14;t++){
-    const a=game.rnd(0,6.28),rad=f.r+game.rnd(3.2,9),x=f.x+Math.cos(a)*rad,z=f.z+Math.sin(a)*rad;
-    if(x<game.RX0+4||x>game.RX1-4||z<game.RZ0+4||z>game.RZ1-4||!game.freeAt(x,z,1.1))continue;
-    deer.list.push({g:makeDeer(kind,x,z),kind,home:f,x,z,hx:x,hz:z,life:game.rnd(28,60),t:game.rnd(0.6,2.4),flee:kind==='srnec'?22:kind==='muflon'?19:20});
-    return;
-  }
+  const spot=forestRim(f);
+  if(!spot)return;
+  const [x,z]=spot;
+  deer.list.push({g:makeDeer(kind,x,z),kind,home:f,x,z,hx:x,hz:z,life:game.rnd(28,60),t:game.rnd(0.6,2.4),flee:kind==='srnec'?22:kind==='muflon'?19:20});
 }
 function tickDeer(dt){
   if(!game.started||!game.forests)return;
@@ -903,8 +1038,10 @@ function tickDeer(dt){
     let ax,az,sp;
     if(dist<24){
       ax=d.x-game.pv.x;az=d.z-game.pv.z;sp=d.flee;
-      const ox=d.x-d.home.x,oz=d.z-d.home.z,od=Math.hypot(ox,oz)||1;
-      if(od<d.home.r+3){ax+=ox/od*12;az+=oz/od*12}
+      if(game.pondDist(d.home.ring,d.x,d.z)<4){
+        const ox=d.x-d.home.x,oz=d.z-d.home.z,od=Math.hypot(ox,oz)||1;
+        ax+=ox/od*12;az+=oz/od*12;
+      }
       if(dist<3.2){d.x+=ax/(Math.hypot(ax,az)||1)*7;d.z+=az/(Math.hypot(ax,az)||1)*7}
       if(deer.told<=0&&dist<8){
         deer.told=5;
@@ -914,8 +1051,9 @@ function tickDeer(dt){
     }else{
       d.t-=dt;
       if(d.t<=0){
-        const a=game.rnd(0,6.28),rad=d.home.r+game.rnd(3,8);
-        d.hx=d.home.x+Math.cos(a)*rad;d.hz=d.home.z+Math.sin(a)*rad;d.t=game.rnd(1.4,3.2);
+        const spot=forestRim(d.home);
+        if(spot){d.hx=spot[0];d.hz=spot[1]}
+        d.t=game.rnd(1.4,3.2);
       }
       ax=d.hx-d.x;az=d.hz-d.z;sp=2.4;
     }

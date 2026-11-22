@@ -1,6 +1,24 @@
 # Změny
 
-Verze jdou od nejnovější. Číslo verze odpovídá tomu, jak hra postupně přibývala v commitech. Verze 6 je současný stav hry po commitu z 10. 11. 2026.
+Verze jdou od nejnovější. Číslo verze odpovídá tomu, jak hra postupně přibývala v commitech. Verze 7 je současný stav hry.
+
+## Verze 7 — 21. 11. 2026
+
+- Ve výběru postav je Bolex se zelím.
+- Pastvina s býkem je pryč. Býk je v ohradě u Agrospolu s krávami. Na místě pastviny zůstávají domy podle mapy.
+- Rybníky mají hranici podle skutečného břehu. Propadlý břeh bez vody už nezavírá cestu.
+- Traktor, válec, povoz a Tatra stojí o pětinu víc. Přibyl kůň: rychlost jako kolo, řehtá a žádné Ozoboty neuveze.
+- Svah loveckého zámečku směrem do vesnice je zasněžený. Kdo na něj vjede, sklouzne dolů, a chumelí jen tam.
+- Každá postava ve výběru má na tričku vlastní znak. Bolexovi zůstává blesk a dráčkovi zelí.
+- Ve výběru je Paní učitelka: rezaté vlasy, sukně a brýle.
+- Kůň na ježdění i koně před povozem jsou o polovinu větší. Vozík zůstává stejný.
+- Lesy stojí jen tam, kde jsou na mapě. Stromy a zábrana drží jejich obrys a cesta lesem zůstává volná.
+- Za obecním úřadem hasí dva hasiči hořící balík. Světla na přilbách blikají a proud vody oheň střídavě tlumí.
+- Chytaní Ozoboti jsou po celé mapě. Většina stojí u domů a duhoví už nedrží místo bývalé pastviny.
+- Kroužek vzácnosti je vidět až u chyceného Ozobota pod postavou: černý, bílý, modrý nebo zlatý. Vzácnější jsou větší a při prodeji se cena násobí jednou, dvakrát, čtyřikrát a osmkrát.
+- V Lipinách jsou dvě robo-garáže a v Bolehošťské Lhotě tři. U každé hlídá pes.
+- Album vede u každé barvy čtyři vzácnosti. Odznak Celá duha chce černý, bílý, modrý i zlatý kroužek. Evo zůstává jen obyčejný.
+- Hlášky Víš, že… mají třicet nových zajímavostí o Bolehošti: zvon, vlak, školu, zelí, tvrze i znak obce.
 
 ## Verze 6 — 11. 11. 2026
 

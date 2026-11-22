@@ -130,7 +130,11 @@ export function initPresence() {
       av.armL.rotation.x = arms;
       av.armR.rotation.x = pose.y > 0.1 ? -2.6 : sw;
     } else if (!peer.away && pose.speed > 0.4) {
-      peer.mesh.wheels.forEach(w => { w.p.rotation.x += pose.speed * dt / w.r; });
+      peer.mesh.wheels.forEach(w => {
+        if (w.gallop) w.p.rotation.x = Math.sin(game.time * 1.8 + (w.phase || 0)) * (w.amp || 0.62);
+        else if (w.swish) w.p.rotation.x = 0.35 + Math.sin(game.time * 1.5) * 0.22;
+        else w.p.rotation.x += pose.speed * dt / w.r;
+      });
     }
     peer.mesh.hour.visible = !!peer.away;
     if (peer.away) peer.mesh.hour.material.opacity = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(game.time * 4));

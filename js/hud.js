@@ -17,6 +17,7 @@ const miniBase=document.createElement('canvas');miniBase.width=mini.width;miniBa
   (game.hills||[]).forEach(h=>{const [a,b]=mm(h.x,h.z);g.fillStyle='#7eae58';g.beginPath();g.arc(a,b,(h.r+h.b)*MS,0,7);g.fill();g.fillStyle='#d4ee9a';g.beginPath();g.arc(a,b,h.r*MS,0,7);g.fill()});
   g.fillStyle='#4aa8ff';game.M.W.forEach(([n,p])=>{g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.fill()});
   g.strokeStyle='#4aa8ff';g.lineWidth=1;game.M.ST.forEach(p=>{g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke()});
+  g.fillStyle='#1e6b30';(game.forests||[]).forEach(f=>{g.beginPath();f.ring.forEach((p,i)=>{const [a,b]=mm(p[0],p[1]);i?g.lineTo(a,b):g.moveTo(a,b)});g.closePath();g.fill()});
   game.M.R.forEach(([k,p])=>{g.strokeStyle=k?'#b99a66':'#fff';g.lineWidth=k?1.7:3.2;g.beginPath();for(let i=0;i<p.length;i+=2){const [a,b]=mm(p[i],p[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}g.stroke()});
   if(game.rail){g.strokeStyle='#3c3c3c';g.lineWidth=2;g.beginPath();game.rail.forEach((p,i)=>{const [a,b]=mm(p[0],p[1]);i?g.lineTo(a,b):g.moveTo(a,b)});g.stroke()}
   game.M.B.forEach(b=>{const {outer}=game.buildingRings(b);g.fillStyle=b[5]===2?'#e04030':b[5]===3?'#e0b000':'#8a7a6a';g.beginPath();outer.forEach((p,i)=>{const [a,c]=mm(p[0],p[1]);i?g.lineTo(a,c):g.moveTo(a,c)});g.fill()});
@@ -28,7 +29,7 @@ const miniBase=document.createElement('canvas');miniBase.width=mini.width;miniBa
 function drawMini(){
   mctx.drawImage(miniBase,0,0);
   const dot=(x,z,c,r)=>{const [a,b]=mm(x,z);mctx.fillStyle=c;mctx.beginPath();mctx.arc(a,b,r,0,7);mctx.fill()};
-  dot(game.H.x,game.H.z,'#ffe94a',5);game.garages.forEach(h=>dot(h.x,h.z,'#ff4fb8',3.5));dot(game.PAST.x,game.PAST.z,'#ffb000',5);
+  dot(game.H.x,game.H.z,'#ffe94a',5);game.garages.forEach(h=>dot(h.x,h.z,'#ff4fb8',3.5));
   if(game.HERD)dot(game.HERD.x,game.HERD.z,'#c45a2a',4);
   if(game.train)dot(game.train.x,game.train.z,'#e02318',3.5);
   game.robots.forEach(r=>{if(r.alive&&Math.hypot(r.x-game.pv.x,r.z-game.pv.z)<60)dot(r.x,r.z,r.quest?'#ff4fb8':'#'+r.lm.color.getHexString(),r.quest?4:2.6)});
@@ -65,6 +66,7 @@ function buildBig(){
   const poly=(pts,fill)=>{g.beginPath();for(let i=0;i<pts.length;i+=2){const[a,b]=bigP(pts[i],pts[i+1]);i?g.lineTo(a,b):g.moveTo(a,b)}if(fill)g.fill();else g.stroke()};
   g.fillStyle='#5ab4ff';game.M.W.forEach(([n,p])=>poly(p,true));
   g.strokeStyle='#5ab4ff';g.lineWidth=Math.max(2,1.4*k);g.lineJoin='round';game.M.ST.forEach(p=>poly(p,false));
+  g.fillStyle='#1b6430';(game.forests||[]).forEach(f=>{const flat=[];for(const p of f.ring)flat.push(p[0],p[1]);poly(flat,true)});
   g.lineCap='round';
   game.M.R.forEach(([kk,p])=>{g.strokeStyle=kk?'#b99a66':'#ffffff';g.lineWidth=((kk?game.roadHalf[1]:game.roadHalf[0])*2)*k;poly(p,false)});
   if(game.rail){g.strokeStyle='#2c2c2c';g.lineWidth=Math.max(3,2.2*k);g.beginPath();game.rail.forEach((p,i)=>{const [a,b]=bigP(p[0],p[1]);i?g.lineTo(a,b):g.moveTo(a,b)});g.stroke()}
@@ -86,7 +88,7 @@ function buildBig(){
   // legenda
   g.textAlign='left';  g.fillStyle='#fffd';g.fillRect(8,8,300,164);g.strokeStyle='#789';g.lineWidth=1;g.strokeRect(8,8,300,164);
   g.font='bold 13px Segoe UI,Arial';g.fillStyle='#123';
-  [['#ffe94a','Domov'],['#ff4fb8','Robo-garáže sousedů (zloději, psi!)'],['#ffb000','Pastvina s býkem a duhovými Ozoboty'],['#ffffff','Ty (šipka = kam koukáš)'],['#22d0c0','Pasti / cíl události či mise'],['#e23b2b','Červený okraj = dál už to nejde'],['#c45cff','Ostatní hráči (⏳ odešel)']].forEach(([c2,t],i)=>{g.fillStyle=c2;g.strokeStyle='#000';g.lineWidth=1.5;g.beginPath();g.arc(22,24+i*21,6,0,7);g.fill();g.stroke();g.fillStyle='#123';g.fillText(t,36,29+i*21)});
+  [['#ffe94a','Domov'],['#ff4fb8','Robo-garáže sousedů (zloději, psi!)'],['#c45a2a','Ohrada Agrospolu – krávy a býk'],['#ffffff','Ty (šipka = kam koukáš)'],['#22d0c0','Pasti / cíl události či mise'],['#e23b2b','Červený okraj = dál už to nejde'],['#c45cff','Ostatní hráči (⏳ odešel)']].forEach(([c2,t],i)=>{g.fillStyle=c2;g.strokeStyle='#000';g.lineWidth=1.5;g.beginPath();g.arc(22,24+i*21,6,0,7);g.fill();g.stroke();g.fillStyle='#123';g.fillText(t,36,29+i*21)});
   g.strokeStyle='#e23b2b';g.lineWidth=8;g.strokeRect(4,4,w-8,h-8);
   bigBase=c;
 }
@@ -95,7 +97,7 @@ function drawBig(){
   bgx.drawImage(bigBase,0,0);const g=bgx,k=bigK;
   const dot=(x,z,c,r,st)=>{const[a,b]=bigP(x,z);g.fillStyle=c;g.beginPath();g.arc(a,b,r,0,7);g.fill();g.strokeStyle=st||'#000';g.lineWidth=2;g.stroke()};
   dot(game.H.x,game.H.z,'#ffe94a',9);halo(g,'DOMOV',bigP(game.H.x,game.H.z)[0],bigP(game.H.x,game.H.z)[1]-12,'#7a5a00','bold 15px Segoe UI,Arial');
-  game.garages.forEach(h=>dot(h.x,h.z,'#ff4fb8',6));dot(game.PAST.x,game.PAST.z,'#ffb000',9);
+  game.garages.forEach(h=>dot(h.x,h.z,'#ff4fb8',6));
   if(game.HERD){dot(game.HERD.x,game.HERD.z,'#c45a2a',8);const[a,b]=bigP(game.HERD.x,game.HERD.z);halo(g,'Ohrada',a,b-12,'#6a3010','bold 14px Segoe UI,Arial')}
   if(game.train){dot(game.train.x,game.train.z,'#e02318',7);const[a,b]=bigP(game.train.x,game.train.z);halo(g,'Vlak',a,b-10,'#8a1010','bold 13px Segoe UI,Arial')}
   if(!mayorIt)mayorIt=game.interact.find(i=>/starost/i.test(i.text()));
@@ -139,14 +141,19 @@ function refreshCarry(){
   while(game.carryGroup.children.length)game.carryGroup.remove(game.carryGroup.children[0]);
   const list=game.carry.slice(0,16),gap=0.75;
   list.forEach((it,i)=>{
-    const d=game.ROB[it.id],m=new THREE.Mesh(new THREE.SphereGeometry(0.34,10,8),new THREE.MeshBasicMaterial({color:it.id==='duha'?0xffffff:d.c}));
-    m.position.set((i-(list.length-1)/2)*gap,0,0);m.userData.id=it.id;m.userData.bx=m.position.x;game.carryGroup.add(m);
+    const d=game.ROB[it.id],g=new THREE.Group();
+    const ball=new THREE.Mesh(new THREE.SphereGeometry(0.34,10,8),new THREE.MeshBasicMaterial({color:it.id==='duha'?0xffffff:d.c}));
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.48,0.1,8,20),new THREE.MeshBasicMaterial({color:(game.TIERS[it.tier||0]||game.TIERS[0]).ring}));
+    ring.rotation.x=Math.PI/2;g.add(ball,ring);
+    g.position.set((i-(list.length-1)/2)*gap,0,0);g.userData.id=it.id;g.userData.ball=ball;g.userData.bx=g.position.x;game.carryGroup.add(g);
   });
 }
 function refreshHud(){
   if(!game.S)return;
   game.$('money').textContent='⚡'+game.fmt(game.S.money);
-  game.$('stats').innerHTML='👟 rychlost '+(game.speed()*(game.veh()?game.veh().mult:1)).toFixed(1)+'<br>📦 Ozoboti '+game.carry.length+'/'+game.cap()+(game.S.pets.some(x=>x)?'<br>🤖 příjem '+game.income().toFixed(1)+' ⚡/s':'');
+  const vvHud=game.veh();
+  const cargo=vvHud&&vvHud.noCargo?'📦 Kůň nic neuveze':'📦 Ozoboti '+game.carry.length+'/'+game.cap();
+  game.$('stats').innerHTML='👟 rychlost '+(game.speed()*(vvHud?vvHud.mult:1)).toFixed(1)+'<br>'+cargo+(game.S.pets.some(x=>x)?'<br>🤖 příjem '+game.income().toFixed(1)+' ⚡/s':'');
   game.$('who').innerHTML='👤 '+game.S.name.replace(/</g,'&lt;')+'  <span style="font-size:16px">⭐'+game.S.stars+'</span><br><span style="font-size:16px">🎯 chyceno: '+game.S.caught+'</span><br><button id="albbtn">📖 Album (Q)</button><button id="chg">Změnit hráče</button>';
   game.$('albbtn').onclick=game.albumModal;game.$('chg').onclick=()=>{game.save();location.reload()};
   game.$('missions').innerHTML=game.X.missionsHtml()||'<div style="font-size:12px;opacity:.85">DENNÍ MISE</div>'+game.S.missions.map(m=>'<div class="'+(m.done?'done':'')+'">• '+game.missionText(m)+(m.done?'':' ('+Math.floor(m.p)+'/'+m.n+')')+'</div>').join('');
@@ -217,6 +224,7 @@ let modalOpen=false,modalRender=null,modalLive=false;
 function openModal(title,render,live=true){modalOpen=true;modalLive=live;modalRender=()=>{game.$('mtitle').textContent=title;render(game.$('mitems'))};modalRender();game.$('modal').style.display='flex'}
 function closeModal(){modalOpen=false;modalRender=null;game.$('modal').style.display='none'}
 game.$('mclose').onclick=closeModal;
+game.$('mx').onclick=closeModal;
 function controlsModal(){
   openModal('⌨ Ovládání',el=>{
     el.innerHTML='<table class="ctrl"><thead><tr><th>Ovládání</th><th>Co dělá</th></tr></thead><tbody>'
@@ -254,8 +262,10 @@ function row(parent,name,desc,price,fn,lbl){
 function shopModal(){
   openModal('🛒 Obchod',el=>{
     el.innerHTML='<div style="margin-bottom:6px">Máš ⚡'+game.fmt(game.S.money)+'</div>';
-    row(el,'👟 Turbo boty','Rychlost '+game.speed().toFixed(1)+' → '+(game.speed()+0.8).toFixed(1),game.cost.boots(),()=>{game.S.money-=game.cost.boots();game.S.boots++});
-    row(el,'📦 Větší krabice na Ozoboty','Kapacita '+game.cap()+' → '+(game.cap()+1),game.cost.bag(),()=>{game.S.money-=game.cost.bag();game.S.bag++});
+    const bootStep=0.8*(game.speed()/(8+0.8*game.S.boots));
+    row(el,'👟 Turbo boty','Rychlost '+game.speed().toFixed(1)+' → '+(game.speed()+bootStep).toFixed(1),game.cost.boots(),()=>{game.S.money-=game.cost.boots();game.S.boots++});
+    const boxNow=game.veh()&&game.veh().noCargo?3+game.S.bag:game.cap();
+    row(el,'📦 Větší krabice na Ozoboty','Kapacita '+boxNow+' → '+(boxNow+1),game.cost.bag(),()=>{game.S.money-=game.cost.bag();game.S.bag++});
     row(el,'🥅 Lepší síť (úroveň '+game.S.net+')','Dosah chytání '+game.catchR().toFixed(1)+' → '+(game.catchR()+0.3).toFixed(1),game.cost.net(),()=>{game.S.money-=game.cost.net();game.S.net++});
     row(el,'✨ Aura štěstí (úroveň '+game.S.aura+')','Prodej a příjem ×'+game.mult().toFixed(1)+' → ×'+(game.mult()+0.2).toFixed(1),game.cost.aura(),()=>{game.S.money-=game.cost.aura();game.S.aura++});
     el.insertAdjacentHTML('beforeend','<h3>Posilovače (klávesy 1 2 3)</h3>');
@@ -348,6 +358,17 @@ game.$('name').addEventListener('keydown',e=>{if(e.key==='Enter'&&game.$('name')
 game.$('go').onclick=()=>{
   const name=game.$('name').value.trim().slice(0,14);if(!name)return;
   game.S=game.loadState(name);game.S.name=name;game.S.char=game.CHARS[selChar].id;game.S.color=game.COLORS[selColor];
+  if(name.toLowerCase()==='roboto'){
+    const s=game.S;
+    s.money=999999;
+    s.boots=15;
+    s.bag=8;
+    s.aura=8;
+    s.net=8;
+    s.vehs=game.VEH.map(v=>v.id);
+    s.items={magnet:99,freeze:99,trap:99};
+    s.pets=game.HELP.map(()=>3);
+  }
   game.setupPlayer(game.CHARS[selChar],game.COLORS[selColor],name);
   game.$('start').style.display='none';game.started=true;
   prevRenderer.dispose();

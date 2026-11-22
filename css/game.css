@@ -30,6 +30,12 @@
   #stamf{height:100%;width:100%;background:linear-gradient(90deg,#ffb347,#ffe94a)}
   #start,#modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1a4a8a99,#0a1a3acc)}
   #modal{display:none;background:#0006}
+  #modal .card{position:relative;display:flex;flex-direction:column;max-width:640px;max-height:94vh;overflow:hidden;padding:18px 22px 14px}
+  #modal #mtitle{margin:0 42px 12px 0}
+  #modal #mitems{overflow:auto;min-height:0}
+  #modal .mfoot{flex:none;margin-top:12px;text-align:right}
+  #mx{position:absolute;top:10px;right:10px;width:36px;height:36px;padding:0;border-radius:50%;background:#e7eef8;color:#1a2744;font-size:26px;line-height:1;z-index:2;display:flex;align-items:center;justify-content:center}
+  #mx:hover{background:#d3deee;color:#111}
   .card{background:#fff;color:#222;border-radius:18px;padding:22px 30px;max-width:760px;width:calc(100% - 30px);box-shadow:0 10px 40px #0007;max-height:94vh;overflow:auto}
   .card h1{margin:0 0 4px;font-size:32px;color:#0a6bd8}
   .card h2{margin:0 0 12px}
@@ -57,9 +63,16 @@
   .chip{display:inline-block;background:#e4eefc;border-radius:20px;padding:3px 12px;margin:2px 4px 2px 0;font-size:14px;cursor:pointer;font-weight:700}
   .chip:hover{background:#c9dcf8}
   #board{font-size:14px;margin:2px 0;color:#345}
-  .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+  .dexnote{margin:0 0 8px;font-size:13px;color:#456}
   .dexc{border:2px solid #dde5f0;border-radius:12px;padding:8px;font-size:13px;background:#f6f9fd}
-  .dexc.no{opacity:.5}
+  .dexc.no{opacity:.72}
+  .dexc.done{border-color:#3aaa55;background:#f3fbf5}
+  .rar{display:flex;flex-direction:column;gap:3px;margin:6px 0}
+  .rar div{display:flex;align-items:center;gap:6px;font-size:12px}
+  .rar .miss{opacity:.4}
+  .rar b{margin-left:auto}
+  .ring{width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px #223;flex:none}
   .led{display:inline-block;width:16px;height:16px;border-radius:50%;vertical-align:middle;margin-right:6px;box-shadow:0 0 8px currentColor}
   .badge{display:inline-block;border-radius:10px;padding:4px 10px;margin:3px 4px 3px 0;font-size:13px;font-weight:700;background:#eef1f5;color:#8a95a5;border:2px solid transparent}
   .tierh{margin:12px 0 4px;font-size:15px}

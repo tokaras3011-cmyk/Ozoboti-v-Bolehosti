@@ -22,8 +22,13 @@ function loadState(name){
     if(s&&s.pets&&s.pets.length===game.HELP.length){const o=Object.assign(d,s);o.items=Object.assign(newState().items,s.items||{});o.stats=Object.assign(newState().stats,s.stats||{});return o}}catch(e){}
   return d;
 }
-const speed=()=>8+0.8*S.boots;
-const cap=()=>3+S.bag+(game.veh()?game.veh().capAdd:0);
+const speed=()=>{
+  const v=8+0.8*(S?S.boots:0);
+  const tester=!!(S&&String(S.name||'').trim().toLowerCase()==='roboto');
+  const round=!!(game.X&&game.X.inRound());
+  return tester&&!round?v*2:v;
+};
+const cap=()=>{const v=game.veh();if(v&&v.noCargo)return 0;return 3+S.bag+(v?v.capAdd:0)};
 const mult=()=>1+0.2*S.aura;
 const catchR=()=>1.6+0.3*S.net+(game.veh()?game.veh().catchAdd:0);
 const income=()=>S.pets.reduce((a,c,i)=>a+c*game.HELP[i].inc,0)*mult();
@@ -162,7 +167,7 @@ const BADGES=[
   {id:'c100',n:'Mistr lovu',d:'100 chycených',tier:'rare',t:()=>game.S.caught>=100},
   {id:'thief',n:'Garážový zloděj',d:'Ukradni 5× robota Evo',tier:'rare',t:()=>game.S.stats.steal>=5},
   {id:'rider',n:'Řidič',d:'Vyzkoušej všechna vozidla',tier:'ultra',t:()=>game.VEH.every(v=>game.S.ridden[v.id])},
-  {id:'all',n:'Celá duha',d:'Chyť všech 7 druhů',tier:'ultra',t:()=>game.ROBO.every(r=>game.S.album[r.id]>0)},
+  {id:'all',n:'Celá duha',d:'Od každé barvy všechny vzácnosti',tier:'ultra',t:()=>game.ROBO.every(r=>game.albumDone(r.id))},
   {id:'rich',n:'Boháč',d:'Vydělej celkem ⚡10 000',tier:'ultra',t:()=>game.S.stats.earned>=10000},
   {id:'c250',n:'Legenda',d:'250 chycených',tier:'legend',t:()=>game.S.caught>=250}
 ];
@@ -179,17 +184,43 @@ function badgesHtml(){
   });
   return h;
 }
+function albumAt(id,tier){
+  const v=game.S.album[id];
+  if(typeof v==='number') return tier?0:v;
+  return (v&&v[tier])||0;
+}
+function albumSlots(id){return id==='evo'?[0]:[0,1,2,3]}
+function albumDone(id){return albumSlots(id).every(t=>albumAt(id,t)>0)}
+function albumBump(id,tier){
+  const a=game.S.album;let v=a[id];
+  if(typeof v==='number') v=[v,0,0,0];
+  else if(!Array.isArray(v)) v=[0,0,0,0];
+  else v=v.slice();
+  const t=tier|0;while(v.length<4)v.push(0);
+  v[t]=(v[t]||0)+1;a[id]=v;
+}
+function albumCard(r){
+  const slots=albumSlots(r.id),any=slots.some(t=>albumAt(r.id,t)>0),done=albumDone(r.id);
+  const col='#'+r.c.toString(16).padStart(6,'0');
+  const rows=slots.map(t=>{
+    const n=albumAt(r.id,t),tier=game.TIERS[t],ring='#'+tier.ring.toString(16).padStart(6,'0');
+    return '<div class="'+(n?'got':'miss')+'"><i class="ring" style="background:'+ring+'"></i><span>'+tier.n+' · '+tier.rn+'</span><b>'+(n||'–')+'</b></div>';
+  }).join('');
+  return '<div class="dexc'+(done?' done':any?'':' no')+'"><span class="led" style="background:'+(r.rainbow?'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)':col)+';color:'+col+'"></span><b>'+r.n+'</b><div class="rar">'+rows+'</div><small>'+(any?r.hint:(r.id==='evo'?'Jen obyčejný, ukradneš ho v garáži.':'Ještě jsi ho nechytil.'))+'</small></div>';
+}
 function albumModal(){
   game.openModal('📖 Album, mise a odznaky',el=>{
+    let got=0,all=0;game.ROBO.forEach(r=>albumSlots(r.id).forEach(t=>{all++;if(albumAt(r.id,t)>0)got++}));
     el.innerHTML='<h3>Denní mise ('+game.S.day+') – ⭐ '+game.S.stars+'</h3>'+game.S.missions.map(m=>'<div class="row"><div><b'+(m.done?' style="color:#1a9a4a"':'')+'>'+(m.done?'✅ ':'')+missionText(m)+'</b><small>Odměna: ⚡'+m.reward+' + ⭐</small><div class="prog"><i style="width:'+Math.min(100,m.p/m.n*100)+'%"></i></div></div><div>'+Math.floor(m.p)+' / '+m.n+'</div></div>').join('')
-      +'<h3>Album Ozobotů</h3><div class="dex">'+game.ROBO.map(r=>{const n=game.S.album[r.id]||0;const col='#'+r.c.toString(16).padStart(6,'0');
-        return '<div class="dexc'+(n?'':' no')+'"><span class="led" style="background:'+(r.rainbow?'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)':col)+';color:'+col+'"></span><b>'+(n?r.n:'???')+'</b><br>chyceno: '+n+'<br><small>'+(n?r.hint:'Ještě jsi ho nechytil.')+'</small></div>'}).join('')+'</div>'
+      +'<h3>Album Ozobotů ('+got+' / '+all+')</h3><p class="dexnote">Od každé barvy chyť černý, bílý, modrý i zlatý kroužek. Evo je jen obyčejný.</p><div class="dex">'+game.ROBO.map(albumCard).join('')+'</div>'
       +badgesHtml()+game.X.albumHtml();
   },false);
 }
 
 
   bind(game, "BADGES", () => BADGES);
+  bind(game, "albumBump", () => albumBump);
+  bind(game, "albumDone", () => albumDone);
   bind(game, "albumModal", () => albumModal);
   bind(game, "checkBadges", () => checkBadges);
   bind(game, "clearQuestRobots", () => clearQuestRobots);
@@ -205,7 +236,7 @@ export function initInterakce() {
 /* Interakce */
 function sellAt(x,z){
   if(!game.carry.length){game.toast('Nemáš co prodat – nachytej Ozoboty!');return}
-  const v=Math.round(game.carry.reduce((a,t)=>a+game.ROB[t.id].v*t.m,0)*game.mult());
+  const v=Math.round(game.carry.reduce((a,t)=>a+game.ROB[t.id].v*t.m*(game.TIERS[t.tier||0]||game.TIERS[0]).mul,0)*game.mult());
   game.S.money+=v;game.S.stats.earned+=v;game.toast('+⚡'+game.fmt(v),'#7dffb0');game.sfx.sell();game.burst(x,game.gy(x,z)+3,z,0xffe94a,20);
   game.carry=[];game.refreshCarry();game.refreshHud();game.mEvent('sell',{v});game.checkBadges();game.save();
 }
@@ -219,7 +250,7 @@ game.garages.forEach(h=>interact.push({x:h.x,z:h.z+2.4,r:4.5,
   act:()=>{
     if(h.stock<=0){game.toast('Garáž je prázdná, vrať se později');return}
     if(game.carry.length>=game.cap()){game.toast('Krabice je plná! Odnes Ozoboty do výkupu','#ffb347');return}
-    h.stock--;game.carry.push({id:'evo',m:1});game.S.album.evo=(game.S.album.evo||0)+1;game.S.stats.steal++;game.S.caught++;game.X.onScore(250);
+    h.stock--;game.carry.push({id:'evo',m:1,tier:0});game.albumBump('evo',0);game.S.stats.steal++;game.S.caught++;game.X.onScore(250);
     game.refreshCarry();game.refreshHud();game.sfx.catch();game.mEvent('steal');game.checkBadges();game.toast('Ukradl jsi robota Evo! Utíkej!','#ff9ad8');
   }}));
 let nearest=null;

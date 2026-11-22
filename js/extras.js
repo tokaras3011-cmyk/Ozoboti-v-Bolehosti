@@ -56,7 +56,37 @@ const TICKER_FACTS=[
   'Obec měla v roce 2023 přibližně 619 obyvatel.',
   'Bolehošťský závitek je vyhlášená místní specialita.',
   'Bolehošťské kysané zelí se prodává i ve velkých obchodních řetězcích.',
-  'Obec se skládá ze tří částí: Bolehošť, Bolehošťská Lhota a Lipiny.'
+  'Obec se skládá ze tří částí: Bolehošť, Bolehošťská Lhota a Lipiny.',
+  'Nejstarší památka obce je zvon odlitý roku 1644 v Hradci Králové zvonařem Martinem Exnerem.',
+  'Kamennou věžičku pro ten zvon postavili roku 1835. Nová zvonička byla hotová v červenci 2004 a od té doby zvoní každou neděli k poledni.',
+  '26. června 1875 projel Bolehoští první osobní vlak.',
+  '4. dubna 1921 se v Bolehošti poprvé rozsvítilo elektrické světlo. Ve Lhotě až před druhou světovou válkou a v Lipinách až po ní.',
+  'Poštovní úřad otevřeli 1. dubna 1894. Nová budova pošty přišla až roku 1977.',
+  'Obecní hostinec otevřeli 1. července 1900. Říkalo se mu Reprezenťák.',
+  'Sokol Bolehošť vznikl 2. prosince 1902. Sokol Lipiny založili roku 1920.',
+  'Učit se v Bolehošti začalo roku 1816. Předtím se učilo jen v zimě, a to na některém statku.',
+  'Školu udělali z pastoušky. Stála na místě, kde je škola dodnes.',
+  'Na průčelí školy je reliéf Jana Amose Komenského. V roce 2013 nahradilo uhelný kotel tepelné čerpadlo.',
+  'Mateřská škola v obci vznikla roku 1939.',
+  'V roce 1880 tu žilo 1141 lidí. V roce 2001 už jen 529.',
+  'Domy dřív stály po obou stranách silnice z Týniště nad Orlicí do Opočna.',
+  'Pamětní kniha píše, že na Spraších se rok co rok pěstovalo zelí. Zelárna pana Václava Bašeho ho posílala po celých Čechách až za moře.',
+  'V zelárně ti kysané zelí naloží i do vlastní nádoby, když se předem domluvíš. Nese značku KLASA.',
+  'V Bolehošti stály dvě tvrze. Tu starší dobyli a rozbořili ve 14. století.',
+  'Severozápadně od obce se těžil bílý štukový písek, severně travertin na hnojení a v lomu opuka na stavby.',
+  'V černozemi se dřív dobývala rašelina pro lázně.',
+  'V Lipinách našli roku 2008 při kopání sklepa křemenný hrot. Je v Muzeu východních Čech v Hradci Králové.',
+  '12. května 2002 projížděl obcí cyklistický Závod míru.',
+  'Znak a prapor dostala obec v roce 2004. Nakreslil je Jan Tejkal.',
+  'První gulášové slavnosti se konaly roku 2011.',
+  'Divadelní spolek Čtenářská beseda vznikl roku 1891.',
+  'Ženský hasičský sbor založili roku 1907. Hasiči ve Lhotě si v letech 1926 až 1927 založili vlastní sbor.',
+  'První zásah bolehošťských hasičů byl 3. května 1882. Po blesku hořelo stavení číslo 64.',
+  'Stará kývací stříkačka ze Lhoty se dochovala a bolehošťští hasiči ji mají dodnes.',
+  'Památník padlým v první světové válce odhalili 2. září 1928.',
+  'V roce 2013 Agrospol spustil bioplynovou stanici.',
+  'Ze tří stran obec obklopují lesy. Na východě se zvedá hřbet Křivina.',
+  'Stará pověst říká, že ves dostala jméno po zemanovi, kterého boleli hosté.'
 ];
 
 /* ---------- Doplňky postav ---------- */
@@ -79,19 +109,79 @@ const ACC={
     for(const [i,c] of [[0,0xffffff],[1,0x2a4fd0],[2,0xd93a2a]]){const s=game.box(0.3,2.3,0.12,c,-0.45+i*0.3,1.7,0.5,g);s.rotation.z=0.6}  // šerpa
     game.box(0.3,0.9,0.1,0xd93a2a,0,2.0,0.5,g);game.box(0.9,0.14,0.14,0xffd21a,0,3.3,0.5,g);            // kravata, řetěz
     game.box(1.3,0.45,1.3,ch.hair,0,4.2,-0.05,g);
+  },
+  bolex(g){
+    let armL=null;
+    g.children.forEach(c=>{
+      if(!c.isGroup)return;
+      if(Math.abs(c.position.y-1.6)<0.05)c.visible=false;
+      if(Math.abs(c.position.y-3.3)<0.05&&c.position.x<0)armL=c;
+      if(Math.abs(c.position.y-3.3)<0.05){
+        game.box(0.7,0.22,0.7,0xf28a12,0,-0.28,0,c);
+        game.box(0.68,0.2,0.68,0xf28a12,0,-1.7,0,c);
+      }
+    });
+    const wheel=new THREE.Group();wheel.position.set(0,0.72,0);
+    const tire=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.72,0.42,16),game.mat(0x2a3340));tire.rotation.z=Math.PI/2;wheel.add(tire);
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.5,12),game.mat(0x3a7ec8));hub.rotation.z=Math.PI/2;wheel.add(hub);
+    g.add(wheel);
+    game.box(0.16,0.55,0.16,0x1f8fe8,-0.28,1.15,0,g);game.box(0.16,0.55,0.16,0x1f8fe8,0.28,1.15,0,g);
+    game.box(1.35,0.22,1.05,0xf28a12,0,3.15,0,g);
+    game.box(1.28,0.16,1.28,0xf28a12,0,4.38,0,g);
+    game.box(0.08,0.7,0.08,0x4aa3e8,0,4.5,0,g);
+    const ball=new THREE.Mesh(new THREE.SphereGeometry(0.16,10,8),new THREE.MeshBasicMaterial({color:0xff9a1a}));ball.position.set(0,5.36,0);g.add(ball);
+    game.box(0.26,0.26,0.26,0xf28a12,-0.78,3.55,0,g);game.box(0.26,0.26,0.26,0xf28a12,0.78,3.55,0,g);
+    game.box(1.28,0.78,0.16,0xf28a12,0,3.42,0.52,g);
+    game.box(1.05,0.58,0.12,0x10233f,0,3.5,0.6,g);
+    game.box(0.26,0.28,0.08,0x3cf0ff,-0.26,3.68,0.68,g);game.box(0.26,0.28,0.08,0x3cf0ff,0.26,3.68,0.68,g);
+    game.box(0.36,0.08,0.08,0x3cf0ff,0,3.48,0.68,g);
+    const badge=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.1,14),game.mat(0x123a6a));badge.rotation.x=Math.PI/2;badge.position.set(0,2.45,0.5);g.add(badge);
+    game.box(0.12,0.28,0.06,0x3cf0ff,0.04,2.32,0.56,g);
+    if(armL){
+      const cab=new THREE.Mesh(new THREE.SphereGeometry(0.4,10,8),game.mat(0x7dce4a));cab.scale.y=0.82;cab.position.set(-0.05,-1.95,0.35);armL.add(cab);
+      game.box(0.5,0.1,0.5,0xc6ee78,-0.05,-1.58,0.35,armL);
+    }
   }
 };
 const VEHMODELS={
+  kun(g){
+    const coat=0x8a4e28,dark=0x4a2a16,mane=0x24160e,hoof=0x241810;
+    game.box(0.95,1.15,2.25,coat,0,1.2,0.15,g);
+    game.box(0.72,0.16,0.78,0x7a2218,0,2.35,-0.15,g);
+    const neck=game.box(0.48,1.2,0.52,coat,0,2.25,1.55,g);neck.rotation.x=-0.42;
+    game.box(0.52,0.5,1.05,coat,0,3.15,2.15,g);
+    game.box(0.38,0.32,0.48,0xd7a06a,0,2.95,2.7,g);
+    game.box(0.12,0.42,0.12,dark,-0.15,3.55,1.85,g);
+    game.box(0.12,0.42,0.12,dark,0.15,3.55,1.85,g);
+    game.box(0.1,0.12,0.08,0x1a120c,-0.24,3.25,2.55,g);
+    game.box(0.1,0.12,0.08,0x1a120c,0.24,3.25,2.55,g);
+    game.box(0.1,0.28,0.08,0xf4f1ea,0,3.28,2.62,g);
+    game.box(0.16,0.9,0.22,mane,0,2.55,1.25,g);
+    const tail=new THREE.Group();tail.position.set(0,2.15,-0.95);tail.rotation.x=0.4;g.add(tail);
+    game.box(0.18,1.15,0.18,mane,0,-1.05,0,tail);
+    const legs=[];
+    const addLeg=(x,z,phase)=>{
+      const p=new THREE.Group();p.position.set(x,1.2,z);g.add(p);
+      game.box(0.24,1.05,0.24,dark,0,-1.05,0.02,p);
+      game.box(0.28,0.16,0.34,hoof,0,-1.18,0.06,p);
+      legs.push({p,phase,gallop:true,amp:0.55});
+    };
+    addLeg(-0.32,0.85,0);addLeg(0.32,0.85,Math.PI);addLeg(-0.32,-0.7,Math.PI);addLeg(0.32,-0.7,0);
+    legs.push({p:tail,swish:true});
+    g.userData.legs=legs;
+    g.scale.setScalar(1.5);
+  },
   povoz(g,wheel){
     wheel(0.95,0.25,1.15,0.95,-1.2,0x6a4020);wheel(0.95,0.25,-1.15,0.95,-1.2,0x6a4020);
     game.box(2.0,0.35,2.6,0x8a5a2a,0,0.95,-1.2,g);
     game.box(2.0,0.6,0.2,0x7a4a1a,0,1.3,-2.4,g);game.box(0.2,0.6,2.4,0x7a4a1a,1.0,1.3,-1.2,g);game.box(0.2,0.6,2.4,0x7a4a1a,-1.0,1.3,-1.2,g);
-    game.box(0.25,0.25,3.4,0x5a3a1a,0,0.95,1.7,g);
+    game.box(0.25,0.25,5.1,0x5a3a1a,0,0.95,2.55,g);
     for(const s of[-0.75,0.75]){
+      const h=new THREE.Group();h.scale.setScalar(1.5);g.add(h);
       const c=s<0?0x8a5a2e:0x5a3a22;
-      game.box(0.8,1.1,2.0,c,s,1.3,3.3,g);game.box(0.4,1.1,0.5,c,s,2.2,4.4,g).rotation.x=-0.35;game.box(0.45,0.45,0.95,c,s,2.95,4.95,g);
-      game.box(0.15,0.8,0.25,0x222222,s,2.4,4.0,g);game.box(0.12,0.12,0.6,0x222222,s,1.9,2.2,g).rotation.x=0.5;
-      for(const [a,b] of [[-0.25,0.7],[0.25,0.7],[-0.25,-0.7],[0.25,-0.7]])game.box(0.2,1.3,0.2,0x3a2a1a,s+a,0,3.3+b,g);
+      game.box(0.8,1.1,2.0,c,s,1.3,3.3,h);game.box(0.4,1.1,0.5,c,s,2.2,4.4,h).rotation.x=-0.35;game.box(0.45,0.45,0.95,c,s,2.95,4.95,h);
+      game.box(0.15,0.8,0.25,0x222222,s,2.4,4.0,h);game.box(0.12,0.12,0.6,0x222222,s,1.9,2.2,h).rotation.x=0.5;
+      for(const [a,b] of [[-0.25,0.7],[0.25,0.7],[-0.25,-0.7],[0.25,-0.7]])game.box(0.2,1.3,0.2,0x3a2a1a,s+a,0,3.3+b,h);
     }
   },
   tatra(g,wheel){
@@ -154,10 +244,12 @@ export function initExtras(){
   const st=$('start').querySelector('#setup');st.parentNode.insertBefore(rb,st);
 
   /* ---------- Nové postavy a vozidla ---------- */
+  game.CHARS.push({id:'bolex',n:'Bolex',skin:0xe7eef6,hair:0x2a7be4,shirt:0x1f8fe8,pants:0x163a72,acc:'bolex'});
   game.CHARS.push({id:'dracek',n:'Dráček Zelnáček',skin:0x6fcf4a,hair:0x3a9a3a,shirt:0x9bd86a,pants:0x3a8a3a,acc:'dracek'});
   game.CHARS.push({id:'hasicka',n:'Hasička',skin:0xf5d0b0,hair:0xc0702a,shirt:0xd93a2a,pants:0x2a2a3a,acc:'hasicka'});
-  game.VEH.push({id:'povoz',n:'Vozatajský povoz',icon:'🐴',price:900,mult:1.5,jump:false,rad:1.3,catchAdd:0.8,capAdd:5,sprint:0,seat:[-0.1,-0.4],legs:-1.4,arms:-0.6,clop:true,desc:'Dva koně jako na závodech SK Sokol Lipiny. +5 míst.'});
-  game.VEH.push({id:'tatra',n:'Hasičská Tatra 138',icon:'🚒',price:2500,mult:1.35,jump:false,rad:1.4,catchAdd:1.6,capAdd:6,sprint:0,seat:[0.7,1.9],legs:-1.5,arms:-0.9,dogsFear:true,siren:true,desc:'Jako ta od bolehošťských hasičů! Houká a psi se bojí. +6 míst.'});
+  game.VEH.push({id:'kun',n:'Kůň',icon:'🐎',price:420,mult:1.7,jump:false,rad:0.7,catchAdd:0,capAdd:0,sprint:1.2,seat:[2.32,-0.3],legs:-1.15,arms:-0.7,neigh:true,noCargo:true,desc:'Rychlý jako kolo a umí řehtat. Neuveze žádné Ozoboty.'});
+  game.VEH.push({id:'povoz',n:'Vozatajský povoz',icon:'🐴',price:1080,mult:1.5,jump:false,rad:1.3,catchAdd:0.8,capAdd:5,sprint:0,seat:[-0.1,-0.4],legs:-1.4,arms:-0.6,clop:true,desc:'Dva koně jako na závodech SK Sokol Lipiny. +5 míst.'});
+  game.VEH.push({id:'tatra',n:'Hasičská Tatra 138',icon:'🚒',price:3000,mult:1.35,jump:false,rad:1.4,catchAdd:1.6,capAdd:6,sprint:0,seat:[0.7,1.9],legs:-1.5,arms:-0.9,dogsFear:true,siren:true,desc:'Jako ta od bolehošťských hasičů! Houká a psi se bojí. +6 míst.'});
   game.BADGES.find(b=>b.id==='rider').d='Vyzkoušej všechna vozidla';
   game.BADGES.push({id:'fest',n:'Na slavnosti',d:'Ochutnej guláš na Gulášové slavnosti',tier:'mid',t:()=>(game.S.stats.gulas||0)>=1});
   game.BADGES.push({id:'zav',n:'Závitkový mistr',d:'Dej si 3× bolehošťský závitek',tier:'mid',t:()=>(game.S.stats.zav||0)>=3});
@@ -266,6 +358,68 @@ export function initExtras(){
     const dc=game.CHARS.find(c=>c.id==='dracek'),a=game.buildAvatar(dc,null);a.g.scale.setScalar(1.15);a.g.position.set(game.H.x+11,game.gy(game.H.x+11,game.H.z-14),game.H.z-14);a.g.rotation.y=-0.4;game.scene.add(a.g);
     game.addCircObs(game.H.x+11,game.H.z-14,1.4);lab('Dráček Zelnáček','#b6f07a',0.85,game.H.x+11,7,game.H.z-14);
   }
+
+  /* ---------- Hasiči za úřadem, na straně k louce ---------- */
+  const hasici=(()=>{
+    const ch=game.CHARS.find(c=>c.id==='hasic');
+    const men=[{x:-75.6,z:-157.4,hose:true},{x:-75.6,z:-161.2,hose:false}];
+    const bale={x:-82.0,z:-159.3};
+    const face=(x,z)=>Math.atan2(bale.x-x,bale.z-z);
+    const crew=[];
+    for(const s of men){
+      const a=game.buildAvatar(ch,null);
+      a.g.scale.setScalar(0.7);
+      a.g.position.set(s.x,game.gy(s.x,s.z),s.z);
+      a.g.rotation.y=face(s.x,s.z);
+      a.armR.rotation.x=s.hose?-1.35:-0.7;
+      a.armL.rotation.x=-0.45;
+      const blueM=new THREE.MeshBasicMaterial({color:0x3a7aff});
+      const redM=new THREE.MeshBasicMaterial({color:0xff3030});
+      const blue=new THREE.Mesh(new THREE.SphereGeometry(0.28,8,6),blueM);blue.position.set(-0.46,4.58,0.95);
+      const red=new THREE.Mesh(new THREE.SphereGeometry(0.28,8,6),redM);red.position.set(0.46,4.58,0.95);
+      a.g.add(blue,red);game.scene.add(a.g);game.addCircObs(s.x,s.z,0.75);
+      crew.push({g:a.g,arm:a.armR,blueM,redM,hose:s.hose,x:s.x,z:s.z});
+    }
+    game.shadowOn(game.box(2.3,1.05,1.35,0xd7a441,bale.x,0,bale.z));
+    game.shadowOn(game.box(2.05,0.32,1.15,0xc4842a,bale.x,1.05,bale.z));
+    game.addBoxObs(bale.x,bale.z,2.5,1.7);
+    const flames=[];
+    const fire=new THREE.Group();
+    for(const [h,col,sc] of [[1.45,0xff4d1a,1],[0.95,0xffb020,0.62],[0.5,0xfff2b0,0.34]]){
+      const m=new THREE.Mesh(new THREE.ConeGeometry(0.48*sc,h,7),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.92}));
+      m.position.y=1.35+h*0.35;fire.add(m);flames.push(m);
+    }
+    fire.position.set(bale.x,game.gy(bale.x,bale.z),bale.z);game.scene.add(fire);
+    const holder=crew[0];
+    const ay=holder.g.rotation.y,s=0.7;
+    const hand={x:holder.x+Math.cos(ay)*1.05*s+Math.sin(ay)*0.7*s,z:holder.z-Math.sin(ay)*1.05*s+Math.cos(ay)*0.7*s,y:holder.g.position.y+1.45};
+    const nozzle={x:bale.x+1.7,z:bale.z+0.15,y:game.gy(bale.x,bale.z)+1.7};
+    const hosePts=[];
+    for(let i=0;i<=7;i++){
+      const t=i/7;
+      hosePts.push({
+        x:hand.x+(nozzle.x-hand.x)*t,
+        z:hand.z+(nozzle.z-hand.z)*t,
+        y:hand.y+(nozzle.y-hand.y)*t-Math.sin(t*Math.PI)*0.85
+      });
+    }
+    for(let i=0;i<hosePts.length-1;i++){
+      const a=hosePts[i],b=hosePts[i+1],dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,len=Math.hypot(dx,dy,dz)||0.01;
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,len,6),game.mat(0x1c1c1c));
+      m.position.set((a.x+b.x)/2,(a.y+b.y)/2,(a.z+b.z)/2);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(dx/len,dy/len,dz/len));
+      m.castShadow=true;game.scene.add(m);
+    }
+    const mid=hosePts[3];game.addCircObs(mid.x,mid.z,0.45);
+    const jet=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.2,1,6),new THREE.MeshBasicMaterial({color:0xb7e4ff,transparent:true,opacity:0.8}));
+    const aim=new THREE.Vector3();game.scene.add(jet);
+    const drops=[];
+    for(let i=0;i<9;i++){
+      const m=new THREE.Mesh(new THREE.SphereGeometry(0.16,6,5),new THREE.MeshBasicMaterial({color:0xd6f3ff,transparent:true,opacity:0.9}));
+      game.scene.add(m);drops.push(m);
+    }
+    return {crew,flames,fire,jet,aim,drops,nozzle,bale};
+  })();
 
   /* ---------- Starosta ---------- */
   const uradLM=game.M.LM.find(l=>l[0]==='Obecní úřad')||game.M.LM[0];
@@ -398,7 +552,7 @@ export function initExtras(){
   }
 
   /* ---------- Hudba a zvuky ---------- */
-  const Mu={ctx:null,master:null,on:true,mode:'day',step:0,nextT:0,noise:null,rainG:null,siren:null,sirenT:0,clopT:0};
+  const Mu={ctx:null,master:null,on:true,mode:'day',step:0,nextT:0,noise:null,rainG:null,siren:null,sirenT:0,clopT:0,neighT:0};
   try{Mu.on=localStorage.getItem('ozo_mute')!=='1'}catch(e){}
   const mtof=m=>440*Math.pow(2,(m-69)/12);
   function muInit(){
@@ -418,6 +572,22 @@ export function initExtras(){
     g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(vol,t+att);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
     o.connect(g);g.connect(Mu.master);o.start(t);o.stop(t+dur+0.05);
   }
+  function neigh(t){
+    const c=Mu.ctx,o=c.createOscillator(),lfo=c.createOscillator(),lg=c.createGain(),f=c.createBiquadFilter(),g=c.createGain();
+    o.type='sawtooth';
+    o.frequency.setValueAtTime(460,t);
+    o.frequency.linearRampToValueAtTime(740,t+0.14);
+    o.frequency.linearRampToValueAtTime(520,t+0.32);
+    o.frequency.linearRampToValueAtTime(780,t+0.48);
+    o.frequency.exponentialRampToValueAtTime(260,t+1.05);
+    lfo.frequency.setValueAtTime(8,t);lfo.frequency.linearRampToValueAtTime(15,t+0.45);
+    lg.gain.setValueAtTime(16,t);lg.gain.linearRampToValueAtTime(48,t+0.4);
+    lfo.connect(lg);lg.connect(o.frequency);
+    f.type='lowpass';f.frequency.setValueAtTime(1600,t);
+    g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.05,t+0.05);g.gain.setValueAtTime(0.04,t+0.55);g.gain.exponentialRampToValueAtTime(0.0001,t+1.12);
+    o.connect(f);f.connect(g);g.connect(Mu.master);o.start(t);lfo.start(t);o.stop(t+1.16);lfo.stop(t+1.16);
+  }
+  game.playNeigh=()=>{if(!Mu.ctx)return;neigh(Mu.ctx.currentTime);Mu.neighT=game.rnd(2.4,4.2)};
   function hit(t,dur,vol,freq){
     const c=Mu.ctx,s=c.createBufferSource();s.buffer=Mu.noise;const hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=freq;const g=c.createGain();
     g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(hp);hp.connect(g);g.connect(Mu.master);s.start(t,Math.random());s.stop(t+dur+0.02);
@@ -459,6 +629,7 @@ export function initExtras(){
     if(game.started&&v&&(game.keys.KeyW||game.keys.KeyS||game.keys.KeyA||game.keys.KeyD||(game.stick&&game.stick.on))&&!game.modalOpen){
       if(v.siren){Mu.sirenT-=dt;if(Mu.sirenT<=0){Mu.sirenT=0.55;const t=Mu.ctx.currentTime;tone(t,Math.random()<2?(Math.floor(game.time*1.8)%2?660:880):660,0.5,'sawtooth',0.03,0.03)}}
       if(v.clop){Mu.clopT-=dt;if(Mu.clopT<=0){Mu.clopT=0.22;const t=Mu.ctx.currentTime;tone(t,180,0.06,'sine',0.09,0.002);tone(t+0.09,140,0.06,'sine',0.07,0.002)}}
+      if(v.neigh){Mu.neighT-=dt;if(Mu.neighT<=0){Mu.neighT=game.rnd(2.6,4.6);neigh(Mu.ctx.currentTime)}}
     }
   }
   function toggleMute(){Mu.on=!Mu.on;try{localStorage.setItem('ozo_mute',Mu.on?'0':'1')}catch(e){}if(Mu.master)Mu.master.gain.value=Mu.on?0.7:0;game.toast(Mu.on?'🔊 Hudba zapnuta':'🔇 Hudba vypnuta (M)','#fff')}
@@ -470,14 +641,15 @@ export function initExtras(){
   game.M.LM.forEach(l=>{
     if(!PLACE_FACTS[l[0]])return;
     const pond=shore[l[0]];
-    const r=pond?pond.r*0.85+6:(/Lhota|Lipiny/.test(l[0])?30:/zámek|Šerka|Jirsák|Březina|jezírka|Čížek|Holdon|Zelnice|spraších|skálou/.test(l[0])?18:9);
-    DISC.push({id:'lm:'+l[0],name:l[0],x:pond?pond.cx:l[1],z:pond?pond.cz:l[2],r,fact:PLACE_FACTS[l[0]]});
+    const r=pond?7:(/Lhota|Lipiny/.test(l[0])?30:/zámek|Šerka|Jirsák|Březina|jezírka|Čížek|Holdon|Zelnice|spraších|skálou/.test(l[0])?18:9);
+    DISC.push({id:'lm:'+l[0],name:l[0],x:pond?pond.cx:l[1],z:pond?pond.cz:l[2],r,pond:pond||null,fact:PLACE_FACTS[l[0]]});
   });
   function checkDiscover(){
     if(!game.S.visited)game.S.visited={};
     for(const d of DISC){
       if(game.S.visited[d.id])continue;
-      if(Math.hypot(d.x-game.pv.x,d.z-game.pv.z)<d.r){game.S.visited[d.id]=1;game.S.money+=25;game.sfx.badge();game.toast('📍 '+d.name+': '+d.fact+' (+⚡25)','#bfe8ff',7);game.refreshHud();game.checkBadges();break}
+      const close=d.pond?game.pondDist(d.pond.ring,game.pv.x,game.pv.z)<d.r:Math.hypot(d.x-game.pv.x,d.z-game.pv.z)<d.r;
+      if(close){game.S.visited[d.id]=1;game.S.money+=25;game.sfx.badge();game.toast('📍 '+d.name+': '+d.fact+' (+⚡25)','#bfe8ff',7);game.refreshHud();game.checkBadges();break}
     }
   }
   function albumHtml(){
@@ -490,7 +662,33 @@ export function initExtras(){
 
   /* ---------- Hlavní tick ---------- */
   function tick(dt){
-    
+    const cycle=(game.time%5)/5;
+    const water=cycle<0.4?0:Math.sin((cycle-0.4)/0.6*Math.PI);
+    const burn=0.16+0.84*(1-water);
+    hasici.crew.forEach((c,i)=>{
+      const on=Math.sin(game.time*9+i*Math.PI)>0;
+      c.blueM.color.setHex(on?0x4aa0ff:0x142038);
+      c.redM.color.setHex(on?0x142038:0xff2a2a);
+      if(c.hose)c.arm.rotation.x=-1.35+Math.sin(game.time*6)*0.06;
+    });
+    hasici.flames.forEach((m,i)=>{
+      const f=Math.max(0.12,burn*(0.78+0.22*Math.sin(game.time*13+i*1.7)));
+      m.scale.set(f,f*(0.9+0.15*Math.sin(game.time*17+i)),f);
+      m.material.opacity=0.25+0.7*burn;
+    });
+    const by=game.gy(hasici.bale.x,hasici.bale.z)+1.85;
+    const nx=hasici.nozzle.x,ny=hasici.nozzle.y,nz=hasici.nozzle.z;
+    hasici.aim.set(hasici.bale.x-nx,by-ny,hasici.bale.z-nz);
+    const jlen=hasici.aim.length()||1;
+    hasici.jet.position.set((nx+hasici.bale.x)/2,(ny+by)/2,(nz+hasici.bale.z)/2);
+    hasici.jet.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),hasici.aim.multiplyScalar(1/jlen));
+    hasici.jet.scale.set(0.7+water,jlen,0.7+water);
+    hasici.jet.material.opacity=0.15+0.75*water;
+    hasici.drops.forEach((m,i)=>{
+      const t=(game.time*1.6+i/hasici.drops.length)%1;
+      m.position.set(nx+(hasici.bale.x-nx)*t,ny+(by-ny)*t+Math.sin(t*Math.PI)*0.35,nz+(hasici.bale.z-nz)*t);
+      m.visible=water>0.05;m.material.opacity=water*0.95;m.scale.setScalar(0.55+water*0.7);
+    });
     if(game.started){
       buffs.zav=Math.max(0,buffs.zav-dt);buffs.gul=Math.max(0,buffs.gul-dt);zelCd=Math.max(0,zelCd-dt);bossCd=Math.max(0,bossCd-dt);
       // událost běží
