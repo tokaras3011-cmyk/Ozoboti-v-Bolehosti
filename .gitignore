@@ -8,3 +8,4 @@ vysledky*.json
 # PIN učitele a průběh kola — jen na počítači, ne na GitHub
 config.local.php
 data/state.json
+data/presence.json
