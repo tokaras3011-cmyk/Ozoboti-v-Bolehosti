@@ -552,20 +552,84 @@ export function initExtras(){
   }
 
   /* ---------- Hudba a zvuky ---------- */
-  const Mu={ctx:null,master:null,on:true,mode:'day',step:0,nextT:0,noise:null,rainG:null,siren:null,sirenT:0,clopT:0,neighT:0};
+  const TRACKS=['audio/zaklad.mp3','audio/skladba-2.mp3','audio/skladba-3.mp3'];
+  const FADE=3.6;
+  const Mu={ctx:null,master:null,on:true,noise:null,rainG:null,siren:null,sirenT:0,clopT:0,neighT:0,players:null,active:0,track:0,fading:false,preloaded:false,failAt:0};
   try{Mu.on=localStorage.getItem('ozo_mute')!=='1'}catch(e){}
-  const mtof=m=>440*Math.pow(2,(m-69)/12);
+  function ramp(param,from,to,t0,dur){
+    param.cancelScheduledValues(t0);
+    param.setValueAtTime(from,t0);
+    param.linearRampToValueAtTime(to,t0+dur);
+  }
   function muInit(){
     if(Mu.ctx)return;
     try{
       game.AC=game.AC||new (window.AudioContext||window.webkitAudioContext)();Mu.ctx=game.AC;
+      if(Mu.ctx.state==='suspended')Mu.ctx.resume();
       Mu.master=game.AC.createGain();Mu.master.gain.value=Mu.on?0.7:0;Mu.master.connect(game.AC.destination);
       const len=game.AC.sampleRate*2,buf=game.AC.createBuffer(1,len,game.AC.sampleRate),dd=buf.getChannelData(0);for(let i=0;i<len;i++)dd[i]=Math.random()*2-1;Mu.noise=buf;
       const src=game.AC.createBufferSource();src.buffer=buf;src.loop=true;const lp=game.AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;Mu.rainG=game.AC.createGain();Mu.rainG.gain.value=0;
       src.connect(lp);lp.connect(Mu.rainG);Mu.rainG.connect(Mu.master);src.start();
-      Mu.nextT=game.AC.currentTime+0.2;
-      setInterval(muSched,100);
+      Mu.players=[0,1].map(i=>{
+        const el=new Audio();el.preload='auto';
+        const node=Mu.ctx.createMediaElementSource(el),g=Mu.ctx.createGain();
+        g.gain.value=0;node.connect(g);g.connect(Mu.master);
+        const p={el,g,i,trying:false};
+        el.addEventListener('timeupdate',()=>onTrackTime(p));
+        el.addEventListener('ended',()=>onTrackEnded(p));
+        return p;
+      });
+      beginTrack(0,0,1.2);
     }catch(e){}
+  }
+  function beginTrack(trackIndex,playerIndex,fadeIn){
+    const p=Mu.players[playerIndex],src=TRACKS[trackIndex];
+    if(p.el.dataset.src!==src){p.el.src=src;p.el.dataset.src=src}
+    try{p.el.currentTime=0}catch(e){}
+    ramp(p.g.gain,0,1,Mu.ctx.currentTime,fadeIn);
+    Mu.track=trackIndex;Mu.active=playerIndex;Mu.fading=false;Mu.preloaded=false;
+    const play=p.el.play();if(play&&play.catch)play.catch(()=>{});
+  }
+  function preloadNext(){
+    const nxt=Mu.players[1-Mu.active],src=TRACKS[(Mu.track+1)%TRACKS.length];
+    if(nxt.el.dataset.src!==src){nxt.el.src=src;nxt.el.dataset.src=src}
+    Mu.preloaded=true;
+  }
+  function crossToNext(){
+    if(Mu.fading||!Mu.players||!Mu.ctx)return;
+    if(performance.now()-(Mu.failAt||0)<1500)return;
+    const cur=Mu.players[Mu.active];
+    const nextTrack=(Mu.track+1)%TRACKS.length;
+    const nxt=Mu.players[1-Mu.active],src=TRACKS[nextTrack];
+    Mu.fading=true;
+    if(nxt.el.dataset.src!==src){nxt.el.src=src;nxt.el.dataset.src=src}
+    try{nxt.el.currentTime=0}catch(e){}
+    const t0=Mu.ctx.currentTime;
+    ramp(nxt.g.gain,0,1,t0,FADE);
+    ramp(cur.g.gain,1,0,t0,FADE);
+    const finish=()=>{
+      Mu.track=nextTrack;Mu.active=nxt.i;Mu.fading=false;Mu.preloaded=false;
+      setTimeout(()=>{
+        if(!Mu.ctx||Mu.active===cur.i)return;
+        cur.el.pause();
+        cur.g.gain.cancelScheduledValues(Mu.ctx.currentTime);
+        cur.g.gain.setValueAtTime(0,Mu.ctx.currentTime);
+      },FADE*1000+160);
+    };
+    const play=nxt.el.play();
+    if(play&&play.then)play.then(finish).catch(()=>{Mu.fading=false;Mu.failAt=performance.now()});
+    else finish();
+  }
+  function onTrackTime(p){
+    if(!Mu.ctx||Mu.active!==p.i||Mu.fading)return;
+    const d=p.el.duration;if(!d||!isFinite(d))return;
+    const left=d-p.el.currentTime;
+    if(!Mu.preloaded&&left<22)preloadNext();
+    if(left<=FADE+0.08)crossToNext();
+  }
+  function onTrackEnded(p){
+    if(Mu.active!==p.i||Mu.fading)return;
+    crossToNext();
   }
   function tone(t,f,dur,type,vol,att=0.02){
     const c=Mu.ctx,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f,t);
@@ -588,42 +652,16 @@ export function initExtras(){
     o.connect(f);f.connect(g);g.connect(Mu.master);o.start(t);lfo.start(t);o.stop(t+1.16);lfo.stop(t+1.16);
   }
   game.playNeigh=()=>{if(!Mu.ctx)return;neigh(Mu.ctx.currentTime);Mu.neighT=game.rnd(2.4,4.2)};
-  function hit(t,dur,vol,freq){
-    const c=Mu.ctx,s=c.createBufferSource();s.buffer=Mu.noise;const hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=freq;const g=c.createGain();
-    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(hp);hp.connect(g);g.connect(Mu.master);s.start(t,Math.random());s.stop(t+dur+0.02);
-  }
-  function kick(t){const c=Mu.ctx,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(40,t+0.15);g.gain.setValueAtTime(0.22,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.2);o.connect(g);g.connect(Mu.master);o.start(t);o.stop(t+0.22)}
-  const MODES={
-    day:{bpm:88,scale:[0,2,4,7,9],roots:[0,-3,-7,-5],types:['M','m','M','M'],base:60,arp:0.55,arpW:'triangle',arpV:0.05,padW:'triangle'},
-    night:{bpm:62,scale:[0,3,5,7,10],roots:[0,-4,3,-2],types:['m','M','M','M'],base:57,arp:0.28,arpW:'sine',arpV:0.05,padW:'sine',oct:12},
-    event:{bpm:140,scale:[0,3,5,7,10],roots:[0,-2,-4,-5],types:['m','M','M','M'],base:62,arp:0.9,arpW:'square',arpV:0.028,padW:'sawtooth',drums:1},
-    fest:{bpm:112,scale:[0,2,4,7,9],roots:[0,-3,-7,-5],types:['M','m','M','M'],base:60,arp:0.35,arpW:'triangle',arpV:0.05,padW:'triangle',oompah:1}
-  };
-  const CHORD={M:[0,4,7],m:[0,3,7]};
-  function curMode(){
-    if(EV.cur&&(EV.cur.type==='boss'||EV.cur.type==='hunt'))return'event';
-    if(EV.cur)return'fest';
-    return game.night>0.55?'night':'day';
-  }
-  function muSched(){
-    if(!Mu.ctx||!game.started)return;
-    const c=Mu.ctx;if(c.state==='suspended')c.resume();
-    while(Mu.nextT<c.currentTime+0.3){
-      if(Mu.step%8===0)Mu.mode=curMode();
-      const m=MODES[Mu.mode],s=Mu.step%8,bar=(Mu.step/8|0)%4,t=Mu.nextT,dur=60/m.bpm/2;
-      const root=m.roots[bar],type=m.types[bar];
-      if(s===0){
-        CHORD[type].forEach(iv=>tone(t,mtof(m.base-12+root+iv),dur*8,m.padW,0.03,0.25));
-        tone(t,mtof(m.base-24+root),dur*4,'sine',0.09,0.03);
-      }
-      if(m.oompah){if(s%4===0)tone(t,mtof(m.base-24+root+(s===4?7:0)),dur*1.6,'sine',0.1,0.01);if(s%4===2)CHORD[type].forEach(iv=>tone(t,mtof(m.base-12+root+iv),dur*0.8,'triangle',0.03,0.01));hit(t,0.04,0.05,6000)}
-      if(m.drums){if(s%2===0)kick(t);else hit(t,0.04,0.06,7000);if(s===4)hit(t,0.12,0.12,1500);tone(t,mtof(m.base-24+root),dur*0.9,'sawtooth',0.04,0.01)}
-      if(Math.random()<m.arp){const n=m.scale[(Math.random()*m.scale.length)|0]+(m.oct||0)+12*((Math.random()<0.3)?1:0);tone(t,mtof(m.base+root+n),dur*(Mu.mode==='night'?3:1.4),m.arpW,m.arpV,0.01)}
-      Mu.nextT+=dur;Mu.step++;
-    }
-  }
   function muTick(dt){
     if(!Mu.ctx)return;
+    if(Mu.ctx.state==='suspended')Mu.ctx.resume();
+    const p=Mu.players&&Mu.players[Mu.active];
+    if(p&&game.started&&Mu.on&&p.el.paused&&!Mu.fading&&!p.trying){
+      p.trying=true;
+      const play=p.el.play();
+      if(play&&play.finally)play.finally(()=>{p.trying=false});
+      else p.trying=false;
+    }
     Mu.rainG.gain.setTargetAtTime(game.W.rain*0.07,Mu.ctx.currentTime,0.5);
     const v=game.veh();
     if(game.started&&v&&(game.keys.KeyW||game.keys.KeyS||game.keys.KeyA||game.keys.KeyD||(game.stick&&game.stick.on))&&!game.modalOpen){
@@ -632,7 +670,22 @@ export function initExtras(){
       if(v.neigh){Mu.neighT-=dt;if(Mu.neighT<=0){Mu.neighT=game.rnd(2.6,4.6);neigh(Mu.ctx.currentTime)}}
     }
   }
-  function toggleMute(){Mu.on=!Mu.on;try{localStorage.setItem('ozo_mute',Mu.on?'0':'1')}catch(e){}if(Mu.master)Mu.master.gain.value=Mu.on?0.7:0;game.toast(Mu.on?'🔊 Hudba zapnuta':'🔇 Hudba vypnuta (M)','#fff')}
+  const muteBtn=document.getElementById('mute');
+  function paintMute(){
+    if(!muteBtn)return;
+    muteBtn.classList.toggle('off',!Mu.on);
+    const label=Mu.on?'Vypnout hudbu (M)':'Zapnout hudbu (M)';
+    muteBtn.title=label;muteBtn.setAttribute('aria-label',label);muteBtn.setAttribute('aria-pressed',Mu.on?'false':'true');
+  }
+  function toggleMute(){
+    Mu.on=!Mu.on;try{localStorage.setItem('ozo_mute',Mu.on?'0':'1')}catch(e){}
+    if(Mu.master)Mu.master.gain.value=Mu.on?0.7:0;
+    if(Mu.on&&Mu.ctx&&Mu.ctx.state==='suspended')Mu.ctx.resume();
+    paintMute();
+    game.toast(Mu.on?'🔊 Hudba zapnuta':'🔇 Hudba vypnuta','#fff');
+  }
+  if(muteBtn)muteBtn.onclick=e=>{e.stopPropagation();toggleMute()};
+  paintMute();
 
   /* ---------- Objevování míst a zajímavosti ---------- */
   const DISC=[];

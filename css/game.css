@@ -13,8 +13,15 @@
   #compass span{display:block;width:34px;height:34px;line-height:34px;font-size:26px;color:#ff9ad8;text-align:center;flex:none}
   #prompt{left:50%;bottom:118px;transform:translateX(-50%);font-size:26px;background:#0009;padding:8px 22px;border-radius:12px;display:none;white-space:nowrap}
   #toast{left:50%;top:92px;transform:translateX(-50%);font-size:26px;opacity:0;transition:opacity .3s;text-align:center;width:80%}
-  #help{position:fixed;right:16px;bottom:12px;z-index:40;width:52px;height:52px;padding:0;border-radius:50%;border:2px solid #fff;background:#0a1a3acc;box-shadow:0 2px 10px #0008;display:flex;align-items:center;justify-content:center}
-  #help:hover{background:#1565c0}
+  #help,#mute{position:fixed;bottom:12px;z-index:40;width:52px;height:52px;padding:0;border-radius:50%;border:2px solid #fff;background:#0a1a3acc;box-shadow:0 2px 10px #0008;display:flex;align-items:center;justify-content:center}
+  #help{right:16px}
+  #mute{right:76px}
+  #mute .off{display:none}
+  #mute.off .on{display:none}
+  #mute.off .off{display:block}
+  #mute.off{background:#6a2438}
+  #help:hover,#mute:hover{background:#1565c0}
+  #mute.off:hover{background:#8a3048}
   #modal{z-index:60}
   .ctrl{width:100%;border-collapse:collapse}
   .ctrl th{text-align:left;color:#0a6bd8;font-size:14px;padding:0 10px 8px}
@@ -102,8 +109,10 @@
   body.touch-play #slots .slot{width:52px;height:54px}
   body.touch-play #slots .slot b{font-size:18px}
   body.touch-play #stam{bottom:72px;width:168px}
-  body.touch-play #help{width:44px;height:44px;right:max(12px,env(safe-area-inset-right));bottom:86px}
-  body.touch-play #help svg{width:22px;height:22px}
+  body.touch-play #help,body.touch-play #mute{width:44px;height:44px;bottom:86px}
+  body.touch-play #help{right:max(12px,env(safe-area-inset-right))}
+  body.touch-play #mute{right:calc(max(12px,env(safe-area-inset-right)) + 52px)}
+  body.touch-play #help svg,body.touch-play #mute svg{width:22px;height:22px}
   body.touch-play #mini{transform:scale(.58);transform-origin:top right}
   body.touch-play #xboard{top:150px;width:168px;max-height:26vh;overflow:auto;font-size:12px}
   @media (orientation:landscape) and (max-height:520px){

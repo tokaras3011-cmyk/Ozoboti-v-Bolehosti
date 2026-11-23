@@ -7,6 +7,8 @@ Verze jdou od nejnovější. Číslo verze odpovídá tomu, jak hra postupně p�
 - Síň slávy drží měsíční statistiky podle jména: chycení Ozoboti, získaná energie, splněné mise, navštívená místa a odehraný čas.
 - Vpravo jsou pořád vidět tři nejlepší podle chycených. Kliknutí na Síň slávy vypíše všechny hráče.
 - Učitel může hráče ze síně smazat nebo přejmenovat.
+- Ve hře hraje nová hudba. Nejdřív základní skladba, pak se plynule střídá s dalšími dvěma a pořadí se opakuje.
+- Vpravo dole je tlačítko na vypnutí a zapnutí hudby. Klávesa M dělá totéž.
 
 ## Verze 7 — 21. 11. 2026
 

@@ -48,7 +48,7 @@ Ikona klávesnice vpravo dole otevře tabulku. Zkráceně:
 | E | použít (výkup, obchod, dílna, starosta, závitek…) |
 | Q | album, mise, odznaky |
 | N nebo klik na minimapu | velká mapa |
-| M | hudba zap/vyp |
+| M nebo tlačítko 🔊 | hudba zap/vyp |
 | tažení myší | kamera |
 
 ## Obsah hry
@@ -67,6 +67,7 @@ Ikona klávesnice vpravo dole otevře tabulku. Zkráceně:
 | `index.html` | plátno, ukazatele a úvod. Herní kód tu není |
 | `js/` | moduly hry (svět, hráč, Ozoboti, kolize, obrazovka, stav, místa, kolo) |
 | `css/` | vzhled hry a stránky učitele |
+| `audio/` | hudba: základní skladba a dvě další, které se s ní střídají |
 | `mapdata.js` | mapa (budovy, silnice, voda, výšky, místa) |
 | `map-okoli.js` | domy a cesty z OpenStreetMap v louce kolem obce |
 | `CHANGELOG.md` | co se ve hře měnilo |

@@ -240,7 +240,7 @@ function controlsModal(){
       +'<tr><td><kbd>E</kbd></td><td>Použít to, co je poblíž, nebo zavřít okno</td></tr>'
       +'<tr><td><kbd>Q</kbd></td><td>Album, mise a odznaky</td></tr>'
       +'<tr><td><kbd>N</kbd></td><td>Velká mapa</td></tr>'
-      +'<tr><td><kbd>M</kbd></td><td>Zapnout nebo vypnout hudbu</td></tr>'
+      +'<tr><td><kbd>M</kbd> nebo tlačítko 🔊</td><td>Zapnout nebo vypnout hudbu</td></tr>'
       +'<tr><td><kbd>Esc</kbd></td><td>Zavřít okno nebo mapu</td></tr>'
       +'<tr><td><kbd>PgUp</kbd></td><td>Přiblížit kameru</td></tr>'
       +'<tr><td><kbd>PgDn</kbd></td><td>Oddálit kameru</td></tr>'

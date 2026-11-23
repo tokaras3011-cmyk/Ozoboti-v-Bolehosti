@@ -341,7 +341,7 @@ setupTouch();
     pad.addEventListener('pointermove',e=>{if(e.pointerId===stickId){stickAt(e);e.preventDefault()}});
     pad.addEventListener('pointerup',e=>{if(e.pointerId===stickId)stickEnd()});
     pad.addEventListener('pointercancel',e=>{if(e.pointerId===stickId)stickEnd()});
-    const blocked=t=>t.closest&&t.closest('#stick,#tacts,#help,#mini,#xboard,#hall,#slots,#who,#modal,#bigmap,#start,#diploma,button,a,input');
+    const blocked=t=>t.closest&&t.closest('#stick,#tacts,#help,#mute,#mini,#xboard,#hall,#slots,#who,#modal,#bigmap,#start,#diploma,button,a,input');
     addEventListener('pointerdown',e=>{
       if(!started||game.modalOpen||game.bigOpen||e.pointerType==='mouse')return;
       if(e.pointerId===stickId||blocked(e.target))return;

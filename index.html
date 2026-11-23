@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Ozoboti z Bolehoště</title>
-<link rel="stylesheet" href="css/game.css?v=10">
+<link rel="stylesheet" href="css/game.css?v=11">
 
 </head>
 <body>
@@ -19,6 +19,17 @@
 <div id="toast" class="hud"></div>
 <div id="slots" class="hud"></div>
 <div id="stam" class="hud"><div id="stamf"></div></div>
+<button id="mute" type="button" title="Vypnout hudbu (M)" aria-label="Vypnout hudbu" aria-pressed="false">
+  <svg class="on" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+    <path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff"/>
+    <path d="M16.2 9.2a4.2 4.2 0 010 5.6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    <path d="M18.6 7a7.2 7.2 0 010 10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <svg class="off" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+    <path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff"/>
+    <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
 <button id="help" type="button" title="Ovládání" aria-label="Ovládání">
   <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
     <rect x="2" y="5" width="20" height="14" rx="2" fill="none" stroke="#fff" stroke-width="2"/>
@@ -58,6 +69,6 @@
   }
 }
 </script>
-<script type="module" src="js/main.js?v=60"></script>
+<script type="module" src="js/main.js?v=65"></script>
 </body>
 </html>
