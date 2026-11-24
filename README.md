@@ -58,7 +58,7 @@ Ikona klávesnice vpravo dole otevře tabulku. Zkráceně:
 - Posilovače a vozidla (kolo, koloběžka, vozatajský povoz, traktor, hasičská Tatra 138, hutní válec).
 - Místní prvky: obecní hostinec, zelárna a zelné pole, hasiči, hřiště, pomník… a zajímavosti o obci.
 - Starosta a **Mega-Ozobot** jako boss, události (hejno, Gulášová slavnost, noční hon).
-- Postavy včetně maskota **Dráčka Zelnáčka**.
+- Postavy včetně maskota **Dráčka Kyseláče**.
 
 ## Soubory
 

@@ -9,7 +9,7 @@ import { initOzoboti, initRobotAi, initSvetOzoboti, api as robots } from './robo
 import { initKolize, api as collision } from './collision.js?v=2';
 import { initMinimapa, initVelkaMapaKlikNaMinimapuNeboKlavesaN, initHud, initModalniOkna, initUvodniObrazovka, api as hud } from './hud.js?v=23';
 import { initStavHryUkladani, initMiseAlbumOdznaky, initInterakce, initPosilovace, api as state } from './game.js?v=13';
-import { initExtras, api as extras } from './extras.js?v=24';
+import { initExtras, api as extras } from './extras.js?v=26';
 import { initRound, api as round } from './round.js?v=4';
 import { initPresence, api as presence } from './presence.js?v=5';
 import { initHall, api as hall } from './hall.js?v=1';

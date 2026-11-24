@@ -8,6 +8,45 @@
 
 </head>
 <body>
+<audio id="uvod" src="audio/uvod.mp3?v=1" preload="auto"></audio>
+<script>
+(function () {
+    var audio = document.getElementById('uvod');
+    var stopped = false;
+    try {
+        if (localStorage.getItem('ozo_mute') === '1') {
+            stopped = true;
+        }
+    } catch (e) {}
+    function clearArm() {
+        window.removeEventListener('pointerdown', arm, true);
+        window.removeEventListener('keydown', arm, true);
+    }
+    function play() {
+        if (stopped) {
+            return;
+        }
+        var pending = audio.play();
+        if (pending && pending.then) {
+            pending.then(clearArm).catch(function () {});
+        }
+    }
+    function arm() {
+        play();
+    }
+    window.uvodAudio = audio;
+    window.stopUvod = function () {
+        stopped = true;
+        audio.pause();
+        clearArm();
+    };
+    if (!stopped) {
+        play();
+        window.addEventListener('pointerdown', arm, true);
+        window.addEventListener('keydown', arm, true);
+    }
+})();
+</script>
 <div id="who" class="hud"></div>
 <div id="missions" class="hud"></div>
 <div id="clock" class="hud"></div>
@@ -69,6 +108,6 @@
   }
 }
 </script>
-<script type="module" src="js/main.js?v=65"></script>
+<script type="module" src="js/main.js?v=67"></script>
 </body>
 </html>

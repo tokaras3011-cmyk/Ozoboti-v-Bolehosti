@@ -2,8 +2,10 @@
 
 Verze jdou od nejnovější. Číslo verze odpovídá tomu, jak hra postupně přibývala v commitech. Verze 8 je současný stav hry.
 
-## Verze 8 — 23. 11. 2026
+## Verze 8 — 24. 11. 2026
 
+- Dráček Zelnáček se jmenuje Dráček Kyseláč.
+- Na úvodní obrazovce hraje nahrávka. Po kliknutí na Hrát ztichne a začne hudba hry. Tlačítko hudby a klávesa M ji na úvodu vypnou taky.
 - Síň slávy drží měsíční statistiky podle jména: chycení Ozoboti, získaná energie, splněné mise, navštívená místa a odehraný čas.
 - Vpravo jsou pořád vidět tři nejlepší podle chycených. Kliknutí na Síň slávy vypíše všechny hráče.
 - Učitel může hráče ze síně smazat nebo přejmenovat.

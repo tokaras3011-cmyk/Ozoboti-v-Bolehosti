@@ -245,7 +245,7 @@ export function initExtras(){
 
   /* ---------- Nové postavy a vozidla ---------- */
   game.CHARS.push({id:'bolex',n:'Bolex',skin:0xe7eef6,hair:0x2a7be4,shirt:0x1f8fe8,pants:0x163a72,acc:'bolex'});
-  game.CHARS.push({id:'dracek',n:'Dráček Zelnáček',skin:0x6fcf4a,hair:0x3a9a3a,shirt:0x9bd86a,pants:0x3a8a3a,acc:'dracek'});
+  game.CHARS.push({id:'dracek',n:'Dráček Kyseláč',skin:0x6fcf4a,hair:0x3a9a3a,shirt:0x9bd86a,pants:0x3a8a3a,acc:'dracek'});
   game.CHARS.push({id:'hasicka',n:'Hasička',skin:0xf5d0b0,hair:0xc0702a,shirt:0xd93a2a,pants:0x2a2a3a,acc:'hasicka'});
   game.VEH.push({id:'kun',n:'Kůň',icon:'🐎',price:420,mult:1.7,jump:false,rad:0.7,catchAdd:0,capAdd:0,sprint:1.2,seat:[2.32,-0.3],legs:-1.15,arms:-0.7,neigh:true,noCargo:true,desc:'Rychlý jako kolo a umí řehtat. Neuveze žádné Ozoboty.'});
   game.VEH.push({id:'povoz',n:'Vozatajský povoz',icon:'🐴',price:1080,mult:1.5,jump:false,rad:1.3,catchAdd:0.8,capAdd:5,sprint:0,seat:[-0.1,-0.4],legs:-1.4,arms:-0.6,clop:true,desc:'Dva koně jako na závodech SK Sokol Lipiny. +5 míst.'});
@@ -353,10 +353,10 @@ export function initExtras(){
     const lf=items.map(it=>({x:it.x,y:it.y+0.1,z:it.z,sx:1.45,sy:0.25,sz:1.45,color:0x4a9a3a}));game.instanced(game.unitBox,game.white,lf);
     lab('Zelné pole','#b6f07a',0.9,p.x,4.5,p.z);
   }
-  // Dráček Zelnáček u domova
+  // Dráček Kyseláč u domova
   {
     const dc=game.CHARS.find(c=>c.id==='dracek'),a=game.buildAvatar(dc,null);a.g.scale.setScalar(1.15);a.g.position.set(game.H.x+11,game.gy(game.H.x+11,game.H.z-14),game.H.z-14);a.g.rotation.y=-0.4;game.scene.add(a.g);
-    game.addCircObs(game.H.x+11,game.H.z-14,1.4);lab('Dráček Zelnáček','#b6f07a',0.85,game.H.x+11,7,game.H.z-14);
+    game.addCircObs(game.H.x+11,game.H.z-14,1.4);lab('Dráček Kyseláč','#b6f07a',0.85,game.H.x+11,7,game.H.z-14);
   }
 
   /* ---------- Hasiči za úřadem, na straně k louce ---------- */
@@ -681,6 +681,10 @@ export function initExtras(){
     Mu.on=!Mu.on;try{localStorage.setItem('ozo_mute',Mu.on?'0':'1')}catch(e){}
     if(Mu.master)Mu.master.gain.value=Mu.on?0.7:0;
     if(Mu.on&&Mu.ctx&&Mu.ctx.state==='suspended')Mu.ctx.resume();
+    if(!game.started&&window.uvodAudio&&window.stopUvod){
+      if(Mu.on){const p=window.uvodAudio.play();if(p&&p.catch)p.catch(()=>{})}
+      else window.uvodAudio.pause();
+    }
     paintMute();
     game.toast(Mu.on?'🔊 Hudba zapnuta':'🔇 Hudba vypnuta','#fff');
   }
@@ -768,6 +772,7 @@ export function initExtras(){
     return null;
   }
   function onStart(){
+    if(window.stopUvod)window.stopUvod();
     if(!game.S.visited)game.S.visited={};
     muInit();EV.next=game.rnd(130,200);factT=40;
     game.poll();
